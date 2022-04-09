@@ -19,41 +19,50 @@
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
 
-/* Private includes ----------------------------------------------------------*/
-/* USER CODE BEGIN Includes */
 
-/* USER CODE END Includes */
-
-/* Private typedef -----------------------------------------------------------*/
-/* USER CODE BEGIN PTD */
-
-/* USER CODE END PTD */
-
-/* Private define ------------------------------------------------------------*/
-/* USER CODE BEGIN PD */
-/* USER CODE END PD */
-
-/* Private macro -------------------------------------------------------------*/
-/* USER CODE BEGIN PM */
-
-/* USER CODE END PM */
-
-/* Private variables ---------------------------------------------------------*/
-
-/* USER CODE BEGIN PV */
-
-/* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
-/* USER CODE BEGIN PFP */
 
-/* USER CODE END PFP */
 
-/* Private user code ---------------------------------------------------------*/
-/* USER CODE BEGIN 0 */
+// Function to transmit a single character over USART3
+	void UART_write(char c)
+	{
+		// Check and wait on the USART status flag that indicates the transmit register is empty.
+		while((USART3->ISR & USART_ISR_TC) == 0){}
+			
+		// Write the character into the transmit data register
+		USART3->TDR = c;
+	}
+	
+	// Function to transmit a string of up to 64 characters over USART3
+	void UART_writes(char s[64])
+	{		
+		for(int i = 0; i < 64; i++)
+		{
+			if (s[i] == 0)
+			{
+				return;
+			} else 
+			{
+				UART_write(s[i]);
+			}
+		}		
+	}
 
-/* USER CODE END 0 */
+	
+	// Global Variables
+	char rx_char = 0;			// Global Character Received
+	char rx_flag = 0;		// Data Received Flag
+	
+	// USART3 Interrupt Function
+	void USART3_4_IRQHandler()
+	{
+		rx_char = (uint8_t)(USART3->RDR);
+		rx_flag = 1;
+	}
+
+
 
 /**
   * @brief  The application entry point.
@@ -61,40 +70,96 @@ void SystemClock_Config(void);
   */
 int main(void)
 {
-  /* USER CODE BEGIN 1 */
-
-  /* USER CODE END 1 */
-
-  /* MCU Configuration--------------------------------------------------------*/
 
   /* Reset of all peripherals, Initializes the Flash interface and the Systick. */
   HAL_Init();
 
-  /* USER CODE BEGIN Init */
-
-  /* USER CODE END Init */
-
   /* Configure the system clock */
   SystemClock_Config();
 
-  /* USER CODE BEGIN SysInit */
+	// Enable Peripheral Clocks
+	RCC->AHBENR 	|= RCC_AHBENR_GPIOCEN;
+	RCC->AHBENR 	|= RCC_AHBENR_GPIOAEN;
+	RCC->AHBENR 	|= RCC_AHBENR_GPIOBEN;
+	RCC->APB2ENR	|= RCC_APB2ENR_SYSCFGCOMPEN;
+	//RCC->APB1ENR 	|= RCC_APB1ENR_TIM2EN;
+	//RCC->APB1ENR 	|= RCC_APB1ENR_TIM3EN;
+	RCC->APB1ENR 	|= RCC_APB1ENR_USART3EN;
+	
+	// Reset GPIOB Registers
+	GPIOB->MODER 		&= ~(0xFFFFFFFF);
+	GPIOB->OTYPER 	&= ~(0xFFFFFFFF);
+	GPIOB->OSPEEDR 	&= ~(0xFFFFFFFF);
+	GPIOB->PUPDR 		&= ~(0xFFFFFFFF);
+	GPIOB->AFR[0] 	&= ~(0xFFFFFFFF);
+	GPIOB->AFR[1] 	&= ~(0xFFFFFFFF);
+	
+	// Reset GPIOC Registers
+	GPIOC->MODER 		&= ~(0xFFFFFFFF);
+	GPIOC->OTYPER 	&= ~(0xFFFFFFFF);
+	GPIOC->OSPEEDR 	&= ~(0xFFFFFFFF);
+	GPIOC->PUPDR 		&= ~(0xFFFFFFFF);
+	GPIOC->AFR[0] 	&= ~(0xFFFFFFFF);
+	GPIOC->AFR[1] 	&= ~(0xFFFFFFFF);
+	GPIOB->AFR[0] 	&= ~(0xFFFFFFFF);
+	
+	// Configure GPIO for USART3
+	// TX = PB10
+	// RX = PB11
+	GPIOB->MODER 		|= (0x00A00000);	// Alternate Function
+	GPIOB->AFR[1] 	|= (0x00004400);	// AF4
+	
+	// Configure USART3
+	USART3->BRR = 69;	// 115200 Baud rate
+	USART3->CR1 |= USART_CR1_TE | USART_CR1_RE | USART_CR1_UE;
+	USART3->CR1 	|= USART_CR1_RXNEIE;
+	
+	/* TTL/USB Color Code
+	 BLK = GND
+	 BRN = CTS: Clear to Send (Handshake)
+	 RED = VCC
+	 ORG = TXD
+	 YEL = RXD
+	 GRN = Request to Send (Notify)
+	*/
+	
+	// Configure Orange LED  PC9
+	GPIOC->MODER 	|= (1 << 16);
+	
+	// Configure Green LED  PC8
+	GPIOC->MODER 	|= (1 << 18);
 
-  /* USER CODE END SysInit */
-
-  /* Initialize all configured peripherals */
-  /* USER CODE BEGIN 2 */
-
-  /* USER CODE END 2 */
-
-  /* Infinite loop */
-  /* USER CODE BEGIN WHILE */
+	// Configure Red LED  PC6
+	GPIOC->MODER 	|= (1 << 12); 
+	
+	// Configure Blue LED  PC7
+	GPIOC->MODER 	|= (1 << 14);  
+	
+	// Enable and Set Priority fo the USART3 Interrupt
+	NVIC_EnableIRQ(USART3_4_IRQn);
+	NVIC_SetPriority(USART3_4_IRQn,1);
+	
   while (1)
   {
-    /* USER CODE END WHILE */
-
-    /* USER CODE BEGIN 3 */
+		if (rx_flag) // Receive Message Ready
+		{
+			switch(rx_char)
+			{
+				case 'R':
+					GPIOC->ODR ^= GPIO_ODR_6;  // Toggle red LED
+					break;
+				case 'B':
+					GPIOC->ODR ^= GPIO_ODR_7;		// Toggle blue LED
+					break;
+				case 'U':
+					break;
+				case 'D':
+					
+					break;
+			}
+			
+		}
   }
-  /* USER CODE END 3 */
 }
 
 /**
@@ -131,9 +196,7 @@ void SystemClock_Config(void)
   }
 }
 
-/* USER CODE BEGIN 4 */
 
-/* USER CODE END 4 */
 
 /**
   * @brief  This function is executed in case of error occurrence.
