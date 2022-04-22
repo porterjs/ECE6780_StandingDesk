@@ -78,6 +78,7 @@ int main(void)
   SystemClock_Config();
 
   /* USER CODE BEGIN SysInit */
+	__HAL_RCC_GPIOA_CLK_ENABLE();
 	__HAL_RCC_GPIOC_CLK_ENABLE();
 	__HAL_RCC_USART1_CLK_ENABLE();
 	__HAL_RCC_SYSCFG_CLK_ENABLE();
@@ -91,11 +92,11 @@ int main(void)
 	HAL_GPIO_Init(GPIOC, &initStrLED);
 	
 	// Init UART TX/RX Pins
-	GPIO_InitTypeDef initStrUART = {GPIO_PIN_4 | GPIO_PIN_5, GPIO_MODE_AF_PP, NULL, NULL};
-	HAL_GPIO_Init(GPIOC, &initStrUART);
+	GPIO_InitTypeDef initStrUART = {GPIO_PIN_9 | GPIO_PIN_10, GPIO_MODE_AF_PP, NULL, NULL};
+	HAL_GPIO_Init(GPIOA, &initStrUART);
 	
 	// Set AFR to alternate function AF4
-	GPIOC->AFR[0] |= (0x1 << 16 | 0x1 << 20);
+	GPIOA->AFR[1] |= (0x1 << 4 | 0x1 << 8);
 	
 	// Set Baud rate to 115200
 	USART1->BRR = 69;
@@ -116,8 +117,8 @@ int main(void)
   while (1)
   {
     /* USER CODE END WHILE */
-		HAL_Delay(250);
-		sendStr("Doing other tasks...\n\r");
+		// HAL_Delay(250);
+		// sendStr("Doing other tasks...\n\r");
   }
   /* USER CODE END 3 */
 }

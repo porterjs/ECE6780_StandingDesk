@@ -22,6 +22,8 @@
 #include "stm32f0xx_it.h"
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
+#include "string.h"
+#include "stdlib.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -143,24 +145,81 @@ void SysTick_Handler(void)
 /* USER CODE BEGIN 1 */
 void USART1_IRQHandler(void) {
 	
-	switch (USART1->RDR) {
-			case 'a':
-				HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_6);
-				break;
-			case 's':
-				HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_7);
-				break;
-			case 'd':
-				HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_8);
-				break;
-			case 'f':
-				HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_9);
-				break;
-			default:
-				sendStr("YOU FAILED BADLY!\n\r");
-				break;
-		}
+	static int buf_index = 0;
+	static char buf[16];
 	
+	char c = USART1->RDR;
+	
+	if (c == '\n') {
+		
+		if (!strncmp(buf, "<3", 2)) {
+			// Heartbeat
+			HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_6);
+		} else if (!strncmp(buf, "UP", 2)) {
+			HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_6);
+			// Manual raise desk
+		} else if (!strncmp(buf, "DN", 2)) {
+			HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_6);
+			// Manual lower desk
+		} else if (!strncmp(buf, "P1", 2)) {
+			HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_6);
+			// Go to standing position
+		} else if (!strncmp(buf, "P2", 2)) {
+			HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_6);
+			// Go to sitting position
+		} else if (!strncmp(buf, "HM", 2)) {
+			HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_6);
+			// Start calibration cycle (turtle speed)
+		} else if (!strncmp(buf, "SP1=", 4)) {
+			HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_6);
+			// Standing height in inches
+			uint8_t height = atoi(buf+4);
+		} else if (!strncmp(buf, "SP2=", 4)) {
+			HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_6);
+			// Sitting height in inches
+			uint8_t height = atoi(buf+4);
+		} else if (!strncmp(buf, "GN=", 3)) {
+			HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_6);
+			// Sitting height in inches
+			uint8_t gains = atoi(buf+3);
+		} else if (!strncmp(buf, "ST", 2)) {
+			HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_6);
+			// Stop
+		} else if (!strncmp(buf, "LU", 2)) {
+			HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_6);
+			// Left leg raise
+		} else if (!strncmp(buf, "LD", 2)) {
+			HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_6);
+			// Left leg lower
+		} else if (!strncmp(buf, "RU", 2)) {
+			// Right leg raise
+			HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_6);
+		} else if (!strncmp(buf, "RD", 2)) {
+			// Right leg lower
+			HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_6);
+		} else if (!strncmp(buf, "RM", 2)) {
+			// Rabbit mode
+			HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_6);
+		} else if (!strncmp(buf, "TM", 2)) {
+			// Turtle mode
+			HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_6);
+		} else if (!strncmp(buf, "RS=", 3)) {
+			// Set rabbit speed
+			HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_6);
+			uint8_t rabbit_speed = atoi(buf+3);
+		} else if (!strncmp(buf, "TS=", 3)) {
+			// Set turtle speed
+			HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_6);
+			uint8_t turtle_speed = atoi(buf+3);
+		}
+		
+		memset(buf, 0, sizeof(buf));
+		buf_index = 0;
+	}
+	else {
+		buf[buf_index] = c;
+		buf_index++;
+	}
 	// Set RXNE Interrrupt bit
 	USART1->CR1 |= 0x1 << 5;
 }
