@@ -43,7 +43,7 @@
 
 /* Private variables ---------------------------------------------------------*/
 /* USER CODE BEGIN PV */
-
+int ticks_left = 1000;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -59,7 +59,10 @@
 /* External variables --------------------------------------------------------*/
 
 /* USER CODE BEGIN EV */
-
+extern int req_start_index;
+extern int req_end_index;
+extern char buf[32];
+extern int req_pending;
 /* USER CODE END EV */
 
 /******************************************************************************/
@@ -127,7 +130,11 @@ void PendSV_Handler(void)
 void SysTick_Handler(void)
 {
   /* USER CODE BEGIN SysTick_IRQn 0 */
-
+	ticks_left --;
+	
+	if (ticks_left == 0) {
+		// SHUT EVERYTHING DOWN OR BLOW UP!!!!!
+	}
   /* USER CODE END SysTick_IRQn 0 */
   HAL_IncTick();
   /* USER CODE BEGIN SysTick_IRQn 1 */
@@ -145,81 +152,24 @@ void SysTick_Handler(void)
 /* USER CODE BEGIN 1 */
 void USART1_IRQHandler(void) {
 	
-	static int buf_index = 0;
-	static char buf[16];
-	
 	char c = USART1->RDR;
 	
-	if (c == '\n') {
-		
-		if (!strncmp(buf, "<3", 2)) {
-			// Heartbeat
-			HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_6);
-		} else if (!strncmp(buf, "UP", 2)) {
-			HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_6);
-			// Manual raise desk
-		} else if (!strncmp(buf, "DN", 2)) {
-			HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_6);
-			// Manual lower desk
-		} else if (!strncmp(buf, "P1", 2)) {
-			HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_6);
-			// Go to standing position
-		} else if (!strncmp(buf, "P2", 2)) {
-			HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_6);
-			// Go to sitting position
-		} else if (!strncmp(buf, "HM", 2)) {
-			HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_6);
-			// Start calibration cycle (turtle speed)
-		} else if (!strncmp(buf, "SP1=", 4)) {
-			HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_6);
-			// Standing height in inches
-			uint8_t height = atoi(buf+4);
-		} else if (!strncmp(buf, "SP2=", 4)) {
-			HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_6);
-			// Sitting height in inches
-			uint8_t height = atoi(buf+4);
-		} else if (!strncmp(buf, "GN=", 3)) {
-			HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_6);
-			// Sitting height in inches
-			uint8_t gains = atoi(buf+3);
-		} else if (!strncmp(buf, "ST", 2)) {
-			HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_6);
-			// Stop
-		} else if (!strncmp(buf, "LU", 2)) {
-			HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_6);
-			// Left leg raise
-		} else if (!strncmp(buf, "LD", 2)) {
-			HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_6);
-			// Left leg lower
-		} else if (!strncmp(buf, "RU", 2)) {
-			// Right leg raise
-			HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_6);
-		} else if (!strncmp(buf, "RD", 2)) {
-			// Right leg lower
-			HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_6);
-		} else if (!strncmp(buf, "RM", 2)) {
-			// Rabbit mode
-			HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_6);
-		} else if (!strncmp(buf, "TM", 2)) {
-			// Turtle mode
-			HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_6);
-		} else if (!strncmp(buf, "RS=", 3)) {
-			// Set rabbit speed
-			HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_6);
-			uint8_t rabbit_speed = atoi(buf+3);
-		} else if (!strncmp(buf, "TS=", 3)) {
-			// Set turtle speed
-			HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_6);
-			uint8_t turtle_speed = atoi(buf+3);
+	if (c == (char)HMI_HEARTBEAT) {
+		ticks_left = 1000;
+	} else {
+		if (c == (char)NEWLINE) {
+			req_pending++;
 		}
 		
-		memset(buf, 0, sizeof(buf));
-		buf_index = 0;
-	}
-	else {
-		buf[buf_index] = c;
-		buf_index++;
-	}
+		buf[req_end_index] = c;
+		req_end_index++;
+		
+		if (req_end_index == 32) {
+			req_end_index = 0;
+		}
+		
+	}	
+	
 	// Set RXNE Interrrupt bit
 	USART1->CR1 |= 0x1 << 5;
 }
