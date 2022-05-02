@@ -223,5 +223,23 @@ void USART1_IRQHandler(void) {
 	// Set RXNE Interrrupt bit
 	USART1->CR1 |= 0x1 << 5;
 }
-/* USER CODE END 1 */
+
+
+// SysTick
+void EXTI0_1_IRQHANDLER()
+{
+	//if ((GPIOA->IDR & GPIO_IDR_0) == GPIO_IDR_0) 
+		{GPIOC->ODR |= GPIO_ODR_6;}
+	//else 
+	//	{GPIOC->ODR &= ~GPIO_ODR_6;}
+	EXTI->PR |= EXTI_PR_PIF0;
+		
+	if ((GPIOA->IDR & GPIO_IDR_1) == GPIO_IDR_1) 
+		{GPIOC->ODR |= GPIO_ODR_7;}
+	else 
+		{GPIOC->ODR &= ~GPIO_ODR_7;}
+	
+	EXTI->PR |= EXTI_PR_PIF1;
+}
+
 

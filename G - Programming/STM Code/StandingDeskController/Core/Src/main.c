@@ -61,18 +61,8 @@ void SystemClock_Config(void);
   */
 int main(void)
 {
-  /* USER CODE BEGIN 1 */
-
-  /* USER CODE END 1 */
-
-  /* MCU Configuration--------------------------------------------------------*/
-
   /* Reset of all peripherals, Initializes the Flash interface and the Systick. */
   HAL_Init();
-
-  /* USER CODE BEGIN Init */
-
-  /* USER CODE END Init */
 
   /* Configure the system clock */
   SystemClock_Config();
@@ -112,13 +102,35 @@ int main(void)
 	
   /* USER CODE END 2 */
 
-  /* Infinite loop */
+  // Initialize PWM
+	 RCC->AHBENR |= RCC_AHBENR_GPIOAEN;                                          // Enable peripheral clock to GPIO
+	pwm_init();
+	pwm_setDutyCycle(25);
+	
+	// Initialize External Interrupts
+	RCC->APB2ENR |= RCC_APB2ENR_SYSCFGCOMPEN;
+	GPIOA->PUPDR |= GPIO_PUPDR_PUPDR1;	// PA0 Pull-down 
+	
+	RCC->AHBENR |= RCC_AHBENR_GPIOAEN; /* (1) */
+	//EXTI->IMR |= EXTI_IMR_IM0 | EXTI_IMR_IM1;	// Enable Interrupt Mask for EXT0-1
+	//EXTI->RTSR |= EXTI_RTSR_RT0 | EXTI_RTSR_RT1; // Enable Rising Edge Trigger for EXT0-1
+	//EXTI->FTSR |= EXTI_FTSR_FT0 | EXTI_FTSR_FT1;  // Enable Falling Edge Trigger for EXT0-1
+	//SYSCFG->EXTICR[0] &= ~SYSCFG_EXT 
+	EXTI->IMR = 0x0001; /* (3) */
+	EXTI->RTSR = 0x0001; /* (4) */
+	EXTI->FTSR = 0x0001; /* (5) */
+
+	NVIC_EnableIRQ(EXTI0_1_IRQn);	// Enable Interrupt Handler
+	NVIC_SetPriority(EXTI0_1_IRQn,0);	// Set Interrupt Priority
+	
   /* USER CODE BEGIN WHILE */
   while (1)
   {
     /* USER CODE END WHILE */
 		// HAL_Delay(250);
 		// sendStr("Doing other tasks...\n\r");
+		
+		GPIOC->ODR |= GPIO_ODR_8;
   }
   /* USER CODE END 3 */
 }
@@ -172,6 +184,42 @@ void sendStr(char* s) {
 		i++;
 	}
 }
+
+void pwm_init(void) {
+    
+    // Set up pin PA4 for H-bridge PWM output (TIMER 14 CH1)
+    GPIOA->MODER |= (1 << 9);
+    GPIOA->MODER &= ~(1 << 8);
+
+    // Set PA4 to AF4,
+    GPIOA->AFR[0] &= 0xFFF0FFFF; // clear PA4 bits,
+    GPIOA->AFR[0] |= (1 << 18);
+
+    // Set up PWM timer
+    RCC->APB1ENR |= RCC_APB1ENR_TIM14EN;
+    TIM14->CR1 = 0;                         // Clear control registers
+    TIM14->CCMR1 = 0;                       // (prevents having to manually clear bits)
+    TIM14->CCER = 0;
+
+    // Set output-compare CH1 to PWM1 mode and enable CCR1 preload buffer
+    TIM14->CCMR1 |= (TIM_CCMR1_OC1M_2 | TIM_CCMR1_OC1M_1 | TIM_CCMR1_OC1PE);
+    TIM14->CCER |= TIM_CCER_CC1E;           // Enable capture-compare channel 1
+    TIM14->PSC = 1;                         // Run timer on 24Mhz
+  //  TIM14->ARR = 1200;                      // PWM at 20kHz							<--- creates high pitch humming
+		TIM14->ARR = 1200;                      // PWM at 40kHz
+    TIM14->CCR1 = 0;                        // Start PWM at 0% duty cycle
+    
+    TIM14->CR1 |= TIM_CR1_CEN;              // Enable timer
+}
+
+// Set the duty cycle of the PWM, accepts (0-100)
+void pwm_setDutyCycle(uint8_t duty) {
+    if(duty <= 100) {
+        TIM14->CCR1 = ((uint32_t)duty*TIM14->ARR)/100;  // Use linear transform to produce CCR1 value
+        // (CCR1 == "pulse" parameter in PWM struct used by peripheral library)
+    }
+}
+
 /* USER CODE END 4 */
 
 /**

@@ -56,6 +56,10 @@ void Error_Handler(void);
 void sendChar(char c);
 
 void sendStr(char* s);
+
+void pwm_init(void);
+void pwm_setDutyCycle(uint8_t);
+
 /* USER CODE END EFP */
 
 /* Private defines -----------------------------------------------------------*/
