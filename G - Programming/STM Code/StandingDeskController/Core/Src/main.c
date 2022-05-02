@@ -21,7 +21,8 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-
+#include "string.h"
+#include "stdlib.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -51,8 +52,95 @@ void SystemClock_Config(void);
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
-/* USER CODE BEGIN 0 */
+int read_buffer_int() {
+	char int_buf[16];
+	int end_index = req_start_index;
+	
+	int i = 0;
+	while (buf[end_index] != NEWLINE && i < 15) { // If that second condition is true, something is wrong, I just don't know how to handle it yet.
+		int_buf[i] = buf[end_index];
+		end_index++;
+		if (end_index == 32) {
+			end_index = 0;
+		}
+	}
+	
+	return atoi(int_buf);
+}
 
+/* USER CODE BEGIN 0 */
+int read_buffer() {
+	int command = buf[req_start_index];
+	
+	if (req_start_index == 32) {
+			req_start_index = 0;
+	}
+	req_pending--;
+	
+	switch (command) {
+		case NEWLINE:
+			return NONE; // Must return here otherwise we keep reading into nothingness...
+			break;
+		case DESK_STOP:
+			break;
+		case DESK_RAISE:
+			break;
+		case DESK_LOWER:
+			break;
+		case DESK_HOME:
+			break;
+		case DESK_GOTO_SP1:
+			break;
+		case DESK_GOTO_SP2:
+			break;
+		case MTR1_RAISE:
+			break;
+		case MTR1_LOWER:
+			break;
+		case MTR2_RAISE:
+			break;
+		case MTR2_LOWER:
+			break;
+		case TURTLE_SPEED_SP:
+			// turtle_speed = read_buffer_int();
+			break;
+		case RABBIT_SPEED_SP:
+			// rabbit_speed = read_buffer_int();
+			break;
+		case RABBIT_SPEED_EN:
+			// rabbit_speed_en = read_buffer_int();
+			break;
+		case SET_SPEED_SCALE:
+			// speed_scale = read_buffer_int();
+			break;
+		case SET_GAIN_P:
+			// gain_p = read_buffer_int();
+			break;
+		case SET_GAIN_I:
+			// gain_i = read_buffer_int();
+			break;
+		case SET_GAIN_D:
+			// gain_d = read_buffer_int();
+			break;
+		default:
+			command = NONE;
+			break;
+	}
+	
+	while (buf[req_start_index] != NEWLINE) {
+		req_start_index++;
+		if (req_start_index == 32) {
+			req_start_index = 0;
+		}
+	}
+	
+	req_start_index++; // Increment one more time to go past the newline character.
+	if (req_start_index == 32) {
+			req_start_index = 0;
+	}
+	
+	return command;
+}
 /* USER CODE END 0 */
 
 /**
@@ -126,11 +214,39 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
+<<<<<<< HEAD
     /* USER CODE END WHILE */
 		// HAL_Delay(250);
 		// sendStr("Doing other tasks...\n\r");
 		
 		GPIOC->ODR |= GPIO_ODR_8;
+=======
+		int command = NONE;
+    if (req_pending > 0) {
+			command = read_buffer();
+		}
+		
+		switch (current_state) {
+			case IDLE:
+				switch (command) {
+					case DESK_RAISE:
+						// Start raising the desk
+						break;
+					default:
+						break;
+				}
+				break;
+			case MOTOR_UP:
+				if (command == DESK_STOP) {
+					// Stop the desk
+				}
+				// Otherwise we should probably ignore the other commands
+				break;
+			default:
+				// How did we get here?
+				break;
+		}
+>>>>>>> 9bcb278f2076c571b8d267309b29cd5859ffdc25
   }
   /* USER CODE END 3 */
 }

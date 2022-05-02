@@ -36,12 +36,43 @@ extern "C" {
 
 /* Exported types ------------------------------------------------------------*/
 /* USER CODE BEGIN ET */
-
+enum states { IDLE, MOTOR_UP };
 /* USER CODE END ET */
 
 /* Exported constants --------------------------------------------------------*/
 /* USER CODE BEGIN EC */
+// --- UART READ DEFINITIONS --- //
+// GENERAL
+#define NONE				      0x00
 
+#define NEWLINE           0x0A
+#define HMI_HEARTBEAT     0xFF
+
+// BASIC CONTROLS
+#define DESK_STOP         0x10
+#define DESK_RAISE        0x11
+#define DESK_LOWER        0x12
+#define DESK_HOME         0x13
+#define DESK_GOTO_SP1     0x14
+#define DESK_GOTO_SP2     0x15
+
+
+// ADVANCED CONTROLS 
+#define MTR1_RAISE        0x20
+#define MTR1_LOWER        0x21
+#define MTR2_RAISE        0x22
+#define MTR2_LOWER        0x23
+
+// MOTOR CONFIG
+#define TURTLE_SPEED_SP   0x30
+#define RABBIT_SPEED_SP   0x31
+#define RABBIT_SPEED_EN   0x32
+
+// ADVANCED CONFIG 
+#define SET_SPEED_SCALE   0x40
+#define SET_GAIN_P        0x41
+#define SET_GAIN_I        0x42
+#define SET_GAIN_D        0x43
 /* USER CODE END EC */
 
 /* Exported macro ------------------------------------------------------------*/
@@ -64,7 +95,11 @@ void pwm_setDutyCycle(uint8_t);
 
 /* Private defines -----------------------------------------------------------*/
 /* USER CODE BEGIN Private defines */
-
+int current_state = IDLE;
+int req_start_index = 0;
+int req_end_index = 0;
+int req_pending = 0;
+char buf[32];
 /* USER CODE END Private defines */
 
 #ifdef __cplusplus

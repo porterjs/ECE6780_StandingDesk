@@ -141,6 +141,23 @@ void SysTick_Handler(void)
 /******************************************************************************/
 
 /* USER CODE BEGIN 1 */
-
+// Writing the EXTI Interrupt Handler (Limit Switches
+	void EXTI0_1_IRQHandler(){
+		
+		// Check Prox Sensor 1
+		if ((GPIOA->IDR & GPIO_IDR_0) == GPIO_IDR_0)
+		{GPIOC->ODR |= GPIO_ODR_6;}
+		else 
+		{GPIOC->ODR &= ~GPIO_ODR_6;}
+		
+		// Check Prox Sensor 2
+		if ((GPIOA->IDR & GPIO_IDR_1) == GPIO_IDR_1)
+		{GPIOC->ODR |= GPIO_ODR_7;}
+		else 
+		{GPIOC->ODR &= ~GPIO_ODR_7;}
+		
+		// Acknowledge Interrupt Complete
+		EXTI->PR |= (1 << 0);
+	}
 /* USER CODE END 1 */
 
