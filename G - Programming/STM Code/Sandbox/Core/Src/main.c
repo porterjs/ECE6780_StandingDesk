@@ -24,44 +24,213 @@
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
 
+/* Define Global Variables */
 
-// Function to transmit a single character over USART3
-	void UART_write(char c)
+
+#define uncalibrated_mask = 0x00;
+#define ftc_mask					= 0x01;	// Failed-to-calibrate
+#define overtravel_mask		= 0x02;
+#define reversepol_mask		= 0x03;
+#define overcurrent_mask	= 0x04;	// Future expansion
+
+
+int8_t MTR1_SR = 0;	// Motor 1 Status Register
+int8_t MTR2_SR = 0; // Motor 2 Status Register
+
+int8_t LS1_SR = 0;
+int8_t LS2_SR = 0;
+
+int8_t AlarmGroup1 = 0;
+
+	
+void RCC_init()
+{
+	// Enable Peripheral RCC
+	RCC->AHBENR |= RCC_AHBENR_GPIOAEN;
+	RCC->AHBENR |= RCC_AHBENR_GPIOBEN;
+	RCC->AHBENR |= RCC_AHBENR_GPIOCEN;
+	RCC->APB2ENR	|= RCC_APB2ENR_SYSCFGCOMPEN;
+	// RCC->APB1ENR 	|= RCC_APB1ENR_TIM2EN;
+	// RCC->APB1ENR 	|= RCC_APB1ENR_TIM3EN;
+	// RCC->APB1ENR 	|= RCC_APB1ENR_USART3EN;
+}
+
+void LED_init()
+{///
+	/*
+	PC6: Red
+	PC7: Blue
+	PC8: Orange
+	PC9: Green
+	*/
+	
+	// Configure LED Outputs
+	GPIOC->MODER 		|=  (GPIO_MODER_MODER6_0 | GPIO_MODER_MODER7_0 | GPIO_MODER_MODER8_0 | GPIO_MODER_MODER9_0);					// Set Output Mode
+	GPIOC->MODER 		&= ~(GPIO_MODER_MODER6_1 | GPIO_MODER_MODER7_1 | GPIO_MODER_MODER8_1 | GPIO_MODER_MODER9_1);					// ...
+	GPIOC->OTYPER 	&= ~(GPIO_OTYPER_OT_6 | GPIO_OTYPER_OT_7 | GPIO_OTYPER_OT_8 | GPIO_OTYPER_OT_9);											// Output Push-Pull
+	GPIOC->OSPEEDR 	&= ~(GPIO_OSPEEDR_OSPEEDR6 | GPIO_OSPEEDR_OSPEEDR7 | GPIO_OSPEEDR_OSPEEDR8 | GPIO_OSPEEDR_OSPEEDR9);	// Low Speed 
+	GPIOC->ODR 			&= ~(GPIO_ODR_6 | GPIO_ODR_7 | GPIO_ODR_8 | GPIO_ODR_9);																							// Off
+}///
+
+void LimitSwitch_init()
+{///
+	/* 
+	PA0: Prox Sensor 1 (N.C.)
+	PA1: Prox Sensor 2 (N.C.)
+	*/
+	
+	// Configure GPIO Inputs
+	GPIOA->MODER 		&= ~(GPIO_MODER_MODER0 | GPIO_MODER_MODER1);					// Set Input Mode
+	GPIOA->OSPEEDR 	&= ~(GPIO_OSPEEDR_OSPEEDR0 | GPIO_OSPEEDR_OSPEEDR1);	// Reset Output Speed
+	GPIOA->PUPDR 		|=  (GPIO_PUPDR_PUPDR0_1 | GPIO_PUPDR_PUPDR1_1);			// Set Pull-down resistor
+	GPIOA->PUPDR 		&= ~(GPIO_PUPDR_PUPDR0_0 | GPIO_PUPDR_PUPDR1_0);			// ...
+	
+	// EXT1 Configuration
+	EXTI->IMR  |= EXTI_IMR_IM0 | EXTI_IMR_IM1;			// Enable Interrupt Masks
+	EXTI->RTSR |= EXTI_RTSR_RT0 | EXTI_RTSR_RT1;		// Enable Rising Edge Trigger
+	EXTI->FTSR |= EXTI_FTSR_FT0 | EXTI_FTSR_FT1;		// Enable Falling Edge Trigger
+	
+	// Set EXTI0 Multiplexer for PA0
+	SYSCFG->EXTICR[0] &= (uint16_t) ~SYSCFG_EXTICR1_EXTI0_PA;
+	
+	// Enable and Set Priority fo the EXTI Interrupt
+	NVIC_EnableIRQ(EXTI0_1_IRQn);
+	NVIC_SetPriority(EXTI0_1_IRQn,2);
+	
+	// Check Current State
+	
+}///
+
+
+void Buzzer_init()
+{///
+	// PA8: Buzzer Output
+	
+	// Configure Buzzer Output
+	GPIOA->MODER 		|= GPIO_MODER_MODER8_0;			// Output Mode
+	GPIOA->MODER 		&= ~GPIO_MODER_MODER8_1;		// ...
+	GPIOA->OTYPER 	&= ~GPIO_OTYPER_OT_8;				// Push-pull type
+	GPIOA->OSPEEDR 	&= ~GPIO_OSPEEDR_OSPEEDR8;	// Low Speed
+	GPIOA->PUPDR 		|= GPIO_PUPDR_PUPDR8_1;			// Pull-down
+	GPIOA->PUPDR 		&= ~GPIO_PUPDR_PUPDR8_0;		// ...
+	GPIOA->ODR 			&= ~GPIO_ODR_8;							// Off
+}///
+
+void Blink()
+{///
+	// Blink Green LED
+	GPIOC->ODR ^= GPIO_ODR_9;
+	HAL_Delay(1000);
+}///	
+
+
+
+
+void MTR1_init()
+{
+	/*
+	PA11: Motor 1 FWD
+	PA12: Motor 1 REV
+	PB8: Motor 1 Enable
+	*/
+	
+	
+	
+	
+	// Configure PWM
+	GPIOB->MODER |= GPIO_MODER_MODER8_1;		// AF Mode
+	GPIOB->MODER &= ~GPIO_MODER_MODER8_0;	// ...
+	GPIOB->OTYPER &= ~GPIO_OTYPER_OT_8;	// Push Pull Type
+	
+	// Set AF2 TIM16
+	GPIOB->AFR[1] &= 0xFFFFFFF0;	// Clear PB8
+	GPIOB->AFR[1] |= (1 << 1);		
+	
+	// Set up PWM timers
+	RCC->APB2ENR |= RCC_APB2ENR_TIM16EN;
+	
+	// Clear Timer Registers
+	TIM16->CR1 = 0;	
+	TIM16->CCMR1 = 0;
+	TIM16->CCER = 0;
+	
+	// Set output-compare CH1 to PWM1 mode and enable CCR1 preload buffer
+	TIM16->CCMR1 |= (TIM_CCMR1_OC1M_2 | TIM_CCMR1_OC1M_1 | TIM_CCMR1_OC1PE); 
+	TIM16->CCER |= TIM_CCER_CC1E;	// Enable Capture-compare channel 1 
+	TIM16->PSC = 1;	// Set Prescale for 24Mhz
+	TIM16->ARR = 1200;	// PWM at 40kHz
+	TIM16->CCR1 = 0;		// Initialize PWM at 0% Duty Cycle
+	TIM16->CR1 |= TIM_CR1_CEN; // Enable Timer
+}
+
+void MTR2_init()
+{
+	/*
+	PB0: Motor 2 FWD
+	PB1: Motor 2 REV
+	PB9: Motor 2 Enable
+	*/
+	
+	// Configure PB0/PB1 GPIO as Outputs
+	GPIOB->MODER |= GPIO_MODER_MODER0_0 | GPIO_MODER_MODER1_0;
+	GPIOB->MODER &= ~(GPIO_MODER_MODER0_1 | GPIO_MODER_MODER1_1);
+	GPIOB->OTYPER &= ~(GPIO_OTYPER_OT_0 | GPIO_OTYPER_OT_1);
+	GPIOB->OSPEEDR &= ~(GPIO_OSPEEDR_OSPEEDR0 | GPIO_OSPEEDR_OSPEEDR1);
+	GPIOB->PUPDR &= ~(GPIO_PUPDR_PUPDR0 | GPIO_PUPDR_PUPDR1);
+	
+	// Configure PB9 for PWM
+	GPIOB->MODER |= GPIO_MODER_MODER9_1;		// AF Mode
+	GPIOB->MODER &= ~GPIO_MODER_MODER9_0;	// ...
+	GPIOB->OTYPER &= ~GPIO_OTYPER_OT_9;	// Push Pull Type
+	
+	// Set AF2 TIM17
+	GPIOB->AFR[1] &= 0xFFFFFF0F;	// Clear PB9
+	GPIOB->AFR[1] |= (1 << 5);		
+	
+	// Set up PWM timers
+	RCC->APB2ENR |= RCC_APB2ENR_TIM17EN;
+	
+	// Clear Timer Registers
+	TIM17->CR1 = 0;
+	TIM17->CCMR1 = 0;
+	TIM17->CCER = 0;
+	
+	// Set output-compare CH1 to PWM1 mode and enable CCR1 preload buffer
+	TIM17->CCMR1 |= (TIM_CCMR1_OC1M_2 | TIM_CCMR1_OC1M_1 | TIM_CCMR1_OC1PE);
+	TIM17->CCER |= TIM_CCER_CC1E; // Enable Capture-compare channel 1 
+	TIM17->PSC = 1; 	// Set Prescale for 24Mhz
+	TIM17->ARR = 1200;	// PWM at 40kHz	
+	TIM17->CCR1 = 0;	// Initialize PWM at 0% Duty Cycle
+	TIM17->CR1 |= TIM_CR1_CEN; // Enable Timer
+}
+
+void MTR1_SetDuty(uint8_t duty)
+{
+	if (duty <= 100)
 	{
-		// Check and wait on the USART status flag that indicates the transmit register is empty.
-		while((USART3->ISR & USART_ISR_TC) == 0){}
-			
-		// Write the character into the transmit data register
-		USART3->TDR = c;
+		TIM16->CCR1 = ((uint32_t)duty*TIM16->ARR)/100;	// Use linear transform to produce CCR1 value
 	}
-	
-	// Function to transmit a string of up to 64 characters over USART3
-	void UART_writes(char s[64])
-	{		
-		for(int i = 0; i < 64; i++)
-		{
-			if (s[i] == 0)
-			{
-				return;
-			} else 
-			{
-				UART_write(s[i]);
-			}
-		}		
-	}
+}
 
-	
-	// Global Variables
-	char rx_char = 0;			// Global Character Received
-	char rx_flag = 0;		// Data Received Flag
-	
-	// USART3 Interrupt Function
-	void USART3_4_IRQHandler()
+void MTR2_SetDuty(uint8_t duty)
+{
+	if (duty <= 100)
 	{
-		rx_char = (uint8_t)(USART3->RDR);
-		rx_flag = 1;
+		TIM17->CCR1 = ((uint32_t)duty*TIM17->ARR)/100;	// Use linear transform to produce CCR1 value
 	}
+}
 
+void SpeedTest()
+{
+	static uint8_t myduty = 0;
+	
+	myduty = myduty + 10;
+	if (myduty > 100) {myduty = 0;}
+	
+	MTR1_SetDuty(myduty);	
+	
+	HAL_Delay(1000);
+}	
 
 
 /**
@@ -77,88 +246,60 @@ int main(void)
   /* Configure the system clock */
   SystemClock_Config();
 
-	// Enable Peripheral Clocks
-	RCC->AHBENR 	|= RCC_AHBENR_GPIOCEN;
-	RCC->AHBENR 	|= RCC_AHBENR_GPIOAEN;
-	RCC->AHBENR 	|= RCC_AHBENR_GPIOBEN;
-	RCC->APB2ENR	|= RCC_APB2ENR_SYSCFGCOMPEN;
-	//RCC->APB1ENR 	|= RCC_APB1ENR_TIM2EN;
-	//RCC->APB1ENR 	|= RCC_APB1ENR_TIM3EN;
-	RCC->APB1ENR 	|= RCC_APB1ENR_USART3EN;
+	/* Enable Peripheral RCC */
+	RCC_init();
 	
-	// Reset GPIOB Registers
-	GPIOB->MODER 		&= ~(0xFFFFFFFF);
-	GPIOB->OTYPER 	&= ~(0xFFFFFFFF);
-	GPIOB->OSPEEDR 	&= ~(0xFFFFFFFF);
-	GPIOB->PUPDR 		&= ~(0xFFFFFFFF);
-	GPIOB->AFR[0] 	&= ~(0xFFFFFFFF);
-	GPIOB->AFR[1] 	&= ~(0xFFFFFFFF);
+	/* Enable LEDs */
+	LED_init();
 	
-	// Reset GPIOC Registers
-	GPIOC->MODER 		&= ~(0xFFFFFFFF);
-	GPIOC->OTYPER 	&= ~(0xFFFFFFFF);
-	GPIOC->OSPEEDR 	&= ~(0xFFFFFFFF);
-	GPIOC->PUPDR 		&= ~(0xFFFFFFFF);
-	GPIOC->AFR[0] 	&= ~(0xFFFFFFFF);
-	GPIOC->AFR[1] 	&= ~(0xFFFFFFFF);
-	GPIOB->AFR[0] 	&= ~(0xFFFFFFFF);
+	/* Enable Limit Switches */
+	LimitSwitch_init();
 	
-	// Configure GPIO for USART3
-	// TX = PB10
-	// RX = PB11
-	GPIOB->MODER 		|= (0x00A00000);	// Alternate Function
-	GPIOB->AFR[1] 	|= (0x00004400);	// AF4
+	/* Enable Buzzer */
+	Buzzer_init();
 	
-	// Configure USART3
-	USART3->BRR = 69;	// 115200 Baud rate
-	USART3->CR1 |= USART_CR1_TE | USART_CR1_RE | USART_CR1_UE;
-	USART3->CR1 	|= USART_CR1_RXNEIE;
+	/* Enable Motors */
+	MTR1_init();
+	MTR2_init();
 	
-	/* TTL/USB Color Code
-	 BLK = GND
-	 BRN = CTS: Clear to Send (Handshake)
-	 RED = VCC
-	 ORG = TXD
-	 YEL = RXD
-	 GRN = Request to Send (Notify)
-	*/
 	
-	// Configure Orange LED  PC9
-	GPIOC->MODER 	|= (1 << 16);
 	
-	// Configure Green LED  PC8
-	GPIOC->MODER 	|= (1 << 18);
-
-	// Configure Red LED  PC6
-	GPIOC->MODER 	|= (1 << 12); 
+	// Configure PA11/PA12 GPIO as Outputs
+//	GPIOA->MODER 		|=  (GPIO_MODER_MODER11_0 | GPIO_MODER_MODER12_0);
+//	GPIOA->MODER 		&= ~(GPIO_MODER_MODER11_1 | GPIO_MODER_MODER12_1);
+//	GPIOA->OTYPER 	&= ~(GPIO_OTYPER_OT_11 | GPIO_OTYPER_OT_12);
+//	GPIOA->OSPEEDR 	&= ~(GPIO_OSPEEDR_OSPEEDR11 | GPIO_OSPEEDR_OSPEEDR12);
+//	GPIOA->PUPDR 		&= ~(GPIO_PUPDR_PUPDR11 | GPIO_PUPDR_PUPDR12);
+//	
+	// Configure Buzzer Output
+	GPIOA->MODER 		|= GPIO_MODER_MODER11_0;			// Output Mode
+	GPIOA->MODER 		&= ~GPIO_MODER_MODER11_1;		// ...
+	GPIOA->OTYPER 	&= ~GPIO_OTYPER_OT_11;				// Push-pull type
+	GPIOA->OSPEEDR 	&= ~GPIO_OSPEEDR_OSPEEDR11;	// Low Speed
+	GPIOA->PUPDR 		|= GPIO_PUPDR_PUPDR11_1;			// Pull-down
+	GPIOA->PUPDR 		&= ~GPIO_PUPDR_PUPDR11_0;		// ...
+	GPIOA->ODR 			|= GPIO_ODR_11;							// Off
 	
-	// Configure Blue LED  PC7
-	GPIOC->MODER 	|= (1 << 14);  
-	
-	// Enable and Set Priority fo the USART3 Interrupt
-	NVIC_EnableIRQ(USART3_4_IRQn);
-	NVIC_SetPriority(USART3_4_IRQn,1);
+	// Motor Forward
+	//GPIOA->ODR |= GPIO_ODR_11;
 	
   while (1)
   {
-		if (rx_flag) // Receive Message Ready
-		{
-			switch(rx_char)
-			{
-				case 'R':
-					GPIOC->ODR ^= GPIO_ODR_6;  // Toggle red LED
-					break;
-				case 'B':
-					GPIOC->ODR ^= GPIO_ODR_7;		// Toggle blue LED
-					break;
-				case 'U':
-					break;
-				case 'D':
-					
-					break;
-			}
 			
-		}
+		// Code Running Indicator
+		Blink();
+		
+		
+		GPIOB->ODR |= GPIO_ODR_0;
+		//HAL_Delay(20);
+		
+		//uint8_t duty = 80;
+		
+		//MTR1_SetDuty(duty);	
+		//MTR2_SetDuty(duty);
+		// Test Motor Speed
+		//SpeedTest();
+		
   }
 }
 
@@ -209,6 +350,9 @@ void Error_Handler(void)
   __disable_irq();
   while (1)
   {
+		
+		GPIOC->ODR |= GPIO_ODR_9;
+		HAL_Delay(1000);
   }
   /* USER CODE END Error_Handler_Debug */
 }
