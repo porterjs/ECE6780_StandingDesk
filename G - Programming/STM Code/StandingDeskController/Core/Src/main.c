@@ -123,7 +123,7 @@ int read_buffer() {
 			// gain_d = read_buffer_int();
 			break;
 		default:
-			command = NONE;
+			command = NONE; // We got a garbage character
 			break;
 	}
 	
@@ -226,24 +226,88 @@ int main(void)
 			command = read_buffer();
 		}
 		
+		/*	
+			UNCALIBRATED
+			HOMING
+			IDLE
+			DESK_LOWERING
+			DESK_RAISING
+			TARGET_POSITIONING
+			LEGL_LOWERING
+			LEGL_RAISING
+			LEGR_LOWERING
+			LEGR_RAISING
+		*/
 		switch (current_state) {
+
+			case UNCALIBRATED:
+				if (command == DESK_HOME) {
+					current_state = HOMING;
+					// ENABLE WDTMTR
+				}
+				break;
+			case HOMING:
+				if (1) { // IF Calibration is done - do we need to make a calculation or set a variable on an interrupt?
+					current_state = IDLE;
+					// Reset Outputs
+					// DISABLE WDTMTR
+				} else if (0) { // WDTMTR_DN
+					// FTH
+				}
+				break;
 			case IDLE:
 				switch (command) {
+					case DESK_HOME:
+						current_state = HOMING;
+						// ENABLE WDTMTR
+						break;
 					case DESK_RAISE:
-						// Start raising the desk
+						current_state = DESK_RAISING;
+					case DESK_LOWER:
+						current_state = DESK_LOWERING;
+						break;
+					case DESK_GOTO_SP1:
+						// Set target
+						current_state = TARGET_POSITIONING;
+						// ENABLE WDTMTR
+						break;
+					case DESK_GOTO_SP2:
+						// Set target
+						current_state = TARGET_POSITIONING;
+						// ENABLE WDTMTR
+						break;
+					case MTR1_RAISE:
+						current_state = LEGL_RAISING;
+						break;
+					case MTR1_LOWER:
+						current_state = LEGL_LOWERING;
+						break;
+					case MTR2_RAISE:
+						current_state = LEGR_RAISING;
+						break;
+					case MTR2_LOWER:
+						current_state = LEGR_LOWERING;
 						break;
 					default:
 						break;
 				}
-				break;
-			case MOTOR_UP:
+			case DESK_LOWERING:
+			case DESK_RAISING:
+			case LEGL_LOWERING:
+			case LEGL_RAISING:
+			case LEGR_LOWERING:
+			case LEGR_RAISING:
 				if (command == DESK_STOP) {
-					// Stop the desk
+					current_state = IDLE;
 				}
-				// Otherwise we should probably ignore the other commands
 				break;
+			case TARGET_POSITIONING:
+				if (1) { // Done Positioning
+					current_state = IDLE;
+					// DISABLE WDTMTR
+				}
 			default:
-				// How did we get here?
+				// How did we get here? (No seriously, if we are here, something is wrong)
 				break;
 		}
 >>>>>>> 9bcb278f2076c571b8d267309b29cd5859ffdc25
