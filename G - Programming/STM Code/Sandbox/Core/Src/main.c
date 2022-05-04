@@ -75,15 +75,15 @@ void LED_init()
 void LimitSwitch_init()
 {///
 	/* 
-	PA0: Prox Sensor 1 (N.C.)
-	PA1: Prox Sensor 2 (N.C.)
+	PC0: Prox Sensor 1 (N.C.)
+	PC1: Prox Sensor 2 (N.C.)
 	*/
 	
 	// Configure GPIO Inputs
-	GPIOA->MODER 		&= ~(GPIO_MODER_MODER0 | GPIO_MODER_MODER1);					// Set Input Mode
-	GPIOA->OSPEEDR 	&= ~(GPIO_OSPEEDR_OSPEEDR0 | GPIO_OSPEEDR_OSPEEDR1);	// Reset Output Speed
-	GPIOA->PUPDR 		|=  (GPIO_PUPDR_PUPDR0_1 | GPIO_PUPDR_PUPDR1_1);			// Set Pull-down resistor
-	GPIOA->PUPDR 		&= ~(GPIO_PUPDR_PUPDR0_0 | GPIO_PUPDR_PUPDR1_0);			// ...
+	GPIOC->MODER 		&= ~(GPIO_MODER_MODER0 | GPIO_MODER_MODER1);					// Set Input Mode
+	GPIOC->OSPEEDR 	&= ~(GPIO_OSPEEDR_OSPEEDR0 | GPIO_OSPEEDR_OSPEEDR1);	// Reset Output Speed
+	GPIOC->PUPDR 		|=  (GPIO_PUPDR_PUPDR0_1 | GPIO_PUPDR_PUPDR1_1);			// Set Pull-down resistor
+	GPIOC->PUPDR 		&= ~(GPIO_PUPDR_PUPDR0_0 | GPIO_PUPDR_PUPDR1_0);			// ...
 	
 	// EXT1 Configuration
 	EXTI->IMR  |= EXTI_IMR_IM0 | EXTI_IMR_IM1;			// Enable Interrupt Masks
@@ -91,7 +91,8 @@ void LimitSwitch_init()
 	EXTI->FTSR |= EXTI_FTSR_FT0 | EXTI_FTSR_FT1;		// Enable Falling Edge Trigger
 	
 	// Set EXTI0 Multiplexer for PA0
-	SYSCFG->EXTICR[0] &= (uint16_t) ~SYSCFG_EXTICR1_EXTI0_PA;
+	SYSCFG->EXTICR[0] &= 0xFFFFFF00;
+	SYSCFG->EXTICR[0] |= (1 << 1) | (1 << 5);
 	
 	// Enable and Set Priority fo the EXTI Interrupt
 	NVIC_EnableIRQ(EXTI0_1_IRQn);
@@ -129,59 +130,65 @@ void Blink()
 void MTR1_init()
 {
 	/*
-	PA11: Motor 1 FWD
-	PA12: Motor 1 REV
+	PB2: Motor 1 FWD
+	PB3: Motor 1 REV
 	PB8: Motor 1 Enable
 	*/
 	
 	
-	
+		// Configure PB2/PB3 GPIO as Outputs
+	GPIOB->MODER 		|=  (GPIO_MODER_MODER2_0 | GPIO_MODER_MODER3_0);
+	GPIOB->MODER 		&= ~(GPIO_MODER_MODER2_1 | GPIO_MODER_MODER3_1);
+	GPIOB->OTYPER 	&= ~(GPIO_OTYPER_OT_2 | GPIO_OTYPER_OT_3);
+	GPIOB->OSPEEDR 	&= ~(GPIO_OSPEEDR_OSPEEDR2 | GPIO_OSPEEDR_OSPEEDR3);
+	GPIOB->PUPDR 		&= ~(GPIO_PUPDR_PUPDR2 | GPIO_PUPDR_PUPDR3);
+	GPIOB->ODR 			&= ~(GPIO_ODR_2 | GPIO_ODR_3);							// Off
 	
 	// Configure PWM
-	GPIOB->MODER |= GPIO_MODER_MODER8_1;		// AF Mode
-	GPIOB->MODER &= ~GPIO_MODER_MODER8_0;	// ...
-	GPIOB->OTYPER &= ~GPIO_OTYPER_OT_8;	// Push Pull Type
+	GPIOA->MODER 	|= GPIO_MODER_MODER4_1;		// AF Mode
+	GPIOA->MODER 	&= ~GPIO_MODER_MODER4_0;	// ...
+	GPIOA->OTYPER &= ~GPIO_OTYPER_OT_4;	// Push Pull Type
 	
-	// Set AF2 TIM16
-	GPIOB->AFR[1] &= 0xFFFFFFF0;	// Clear PB8
-	GPIOB->AFR[1] |= (1 << 1);		
+	// Set AF4 TIM14
+	GPIOA->AFR[0] &= 0xFFF0FFFF;	// Clear PA4
+	GPIOA->AFR[0] |= (1 << 18);		
 	
 	// Set up PWM timers
-	RCC->APB2ENR |= RCC_APB2ENR_TIM16EN;
+	RCC->APB1ENR |= RCC_APB1ENR_TIM14EN;
 	
 	// Clear Timer Registers
-	TIM16->CR1 = 0;	
-	TIM16->CCMR1 = 0;
-	TIM16->CCER = 0;
+	TIM14->CR1 		= 0;	
+	TIM14->CCMR1 	= 0;
+	TIM14->CCER 	= 0;
 	
 	// Set output-compare CH1 to PWM1 mode and enable CCR1 preload buffer
-	TIM16->CCMR1 |= (TIM_CCMR1_OC1M_2 | TIM_CCMR1_OC1M_1 | TIM_CCMR1_OC1PE); 
-	TIM16->CCER |= TIM_CCER_CC1E;	// Enable Capture-compare channel 1 
-	TIM16->PSC = 1;	// Set Prescale for 24Mhz
-	TIM16->ARR = 1200;	// PWM at 40kHz
-	TIM16->CCR1 = 0;		// Initialize PWM at 0% Duty Cycle
-	TIM16->CR1 |= TIM_CR1_CEN; // Enable Timer
+	TIM14->CCMR1 	|= (TIM_CCMR1_OC1M_2 | TIM_CCMR1_OC1M_1 | TIM_CCMR1_OC1PE); 
+	TIM14->CCER 	|= TIM_CCER_CC1E;	// Enable Capture-compare channel 1 
+	TIM14->PSC 		 = 1;			// Set Prescale for 24Mhz
+	TIM14->ARR 		 = 1200;	// PWM at 40kHz
+	TIM14->CCR1 	 = 0;			// Initialize PWM at 0% Duty Cycle
+	TIM14->CR1 		|= TIM_CR1_CEN; // Enable Timer
 }
 
 void MTR2_init()
 {
 	/*
-	PB0: Motor 2 FWD
-	PB1: Motor 2 REV
+	PB7: Motor 2 FWD
+	PB8: Motor 2 REV
 	PB9: Motor 2 Enable
 	*/
 	
-	// Configure PB0/PB1 GPIO as Outputs
-	GPIOB->MODER |= GPIO_MODER_MODER0_0 | GPIO_MODER_MODER1_0;
-	GPIOB->MODER &= ~(GPIO_MODER_MODER0_1 | GPIO_MODER_MODER1_1);
-	GPIOB->OTYPER &= ~(GPIO_OTYPER_OT_0 | GPIO_OTYPER_OT_1);
-	GPIOB->OSPEEDR &= ~(GPIO_OSPEEDR_OSPEEDR0 | GPIO_OSPEEDR_OSPEEDR1);
-	GPIOB->PUPDR &= ~(GPIO_PUPDR_PUPDR0 | GPIO_PUPDR_PUPDR1);
+	// Configure PB7/PB8 GPIO as Outputs
+	GPIOB->MODER 		|= GPIO_MODER_MODER7_0 | GPIO_MODER_MODER8_0;
+	GPIOB->MODER 		&= ~(GPIO_MODER_MODER7_1 | GPIO_MODER_MODER8_1);
+	GPIOB->OTYPER 	&= ~(GPIO_OTYPER_OT_7 | GPIO_OTYPER_OT_8);
+	GPIOB->OSPEEDR 	&= ~(GPIO_OSPEEDR_OSPEEDR7 | GPIO_OSPEEDR_OSPEEDR8);
+	GPIOB->PUPDR 		&= ~(GPIO_PUPDR_PUPDR7 | GPIO_PUPDR_PUPDR8);
 	
 	// Configure PB9 for PWM
-	GPIOB->MODER |= GPIO_MODER_MODER9_1;		// AF Mode
-	GPIOB->MODER &= ~GPIO_MODER_MODER9_0;	// ...
-	GPIOB->OTYPER &= ~GPIO_OTYPER_OT_9;	// Push Pull Type
+	GPIOB->MODER 	|= GPIO_MODER_MODER9_1;		// AF Mode
+	GPIOB->MODER 	&= ~GPIO_MODER_MODER9_0;	// ...
+	GPIOB->OTYPER &= ~GPIO_OTYPER_OT_9;			// Push Pull Type
 	
 	// Set AF2 TIM17
 	GPIOB->AFR[1] &= 0xFFFFFF0F;	// Clear PB9
@@ -191,24 +198,25 @@ void MTR2_init()
 	RCC->APB2ENR |= RCC_APB2ENR_TIM17EN;
 	
 	// Clear Timer Registers
-	TIM17->CR1 = 0;
-	TIM17->CCMR1 = 0;
-	TIM17->CCER = 0;
+	TIM17->CR1 		= 0;
+	TIM17->CCMR1 	= 0;
+	TIM17->CCER 	= 0;
 	
 	// Set output-compare CH1 to PWM1 mode and enable CCR1 preload buffer
-	TIM17->CCMR1 |= (TIM_CCMR1_OC1M_2 | TIM_CCMR1_OC1M_1 | TIM_CCMR1_OC1PE);
-	TIM17->CCER |= TIM_CCER_CC1E; // Enable Capture-compare channel 1 
-	TIM17->PSC = 1; 	// Set Prescale for 24Mhz
-	TIM17->ARR = 1200;	// PWM at 40kHz	
-	TIM17->CCR1 = 0;	// Initialize PWM at 0% Duty Cycle
-	TIM17->CR1 |= TIM_CR1_CEN; // Enable Timer
+	TIM17->CCMR1 	|= (TIM_CCMR1_OC1M_2 | TIM_CCMR1_OC1M_1 | TIM_CCMR1_OC1PE);
+	TIM17->CCER 	|= TIM_CCER_CC1E; // Enable Capture-compare channel 1 
+	TIM17->PSC 		 = 1; 	// Set Prescale for 24Mhz
+	TIM17->ARR 		 = 1200;	// PWM at 40kHz	
+	TIM17->CCR1 	 = 0;	// Initialize PWM at 0% Duty Cycle
+	TIM17->BDTR 	|= TIM_BDTR_MOE;
+	TIM17->CR1 		|= TIM_CR1_CEN; // Enable Timer
 }
 
 void MTR1_SetDuty(uint8_t duty)
 {
 	if (duty <= 100)
 	{
-		TIM16->CCR1 = ((uint32_t)duty*TIM16->ARR)/100;	// Use linear transform to produce CCR1 value
+		TIM14->CCR1 = ((uint32_t)duty*TIM14->ARR)/100;	// Use linear transform to produce CCR1 value
 	}
 }
 
@@ -232,6 +240,88 @@ void SpeedTest()
 	HAL_Delay(1000);
 }	
 
+
+void encoder_init()
+{
+	/*
+	PB4: MTR1 Encoder A
+	PB5: MTR1 Encoder B
+	*/
+
+
+    GPIOB->MODER 	&= ~(GPIO_MODER_MODER4_0 | GPIO_MODER_MODER5_0);
+    GPIOB->MODER 	|= (GPIO_MODER_MODER4_1 | GPIO_MODER_MODER5_1);
+    GPIOB->AFR[0] &= 0xFF00FFFF;
+		GPIOB->AFR[0] |= ( (1 << 16) | (1 << 20) );
+
+    // Set up encoder interface (TIM3 encoder input mode)
+    RCC->APB1ENR |= RCC_APB1ENR_TIM3EN;
+    TIM3->CCMR1 	= 0;
+    TIM3->CCER 		= 0;
+    TIM3->SMCR 		= 0;
+    TIM3->CR1 		= 0;
+
+    TIM3->CCMR1 	|= (TIM_CCMR1_CC1S_0 | TIM_CCMR1_CC2S_0);   // TI1FP1 and TI2FP2 signals connected to CH1 and CH2
+    TIM3->SMCR 		|= (TIM_SMCR_SMS_1 | TIM_SMCR_SMS_0);        // Capture encoder on both rising and falling edges
+    TIM3->ARR 		 = 0xFFFF;                                     // Set ARR to top of timer (longest possible period)
+    TIM3->CNT 		 = 0x7FFF;                                     // Bias at midpoint to allow for negative rotation
+    TIM3->CR1 		|= TIM_CR1_CEN;                               // Enable timer
+
+	/*
+	PA0: MTR1 Encoder A
+	PA1: MTR1 Encoder B
+	*/
+
+
+    GPIOA->MODER 	&= ~(GPIO_MODER_MODER0_0 | GPIO_MODER_MODER1_0);
+    GPIOA->MODER 	|=  (GPIO_MODER_MODER0_1 | GPIO_MODER_MODER1_1);
+    GPIOA->AFR[0] &=  0xFFFFFF00;
+		GPIOA->AFR[0] |=  ((1 << 1) | (1 << 5));
+
+    // Set up encoder interface (TIM3 encoder input mode)
+    RCC->APB1ENR |= RCC_APB1ENR_TIM2EN;
+    TIM2->CCMR1 	= 0;
+    TIM2->CCER		= 0;
+    TIM2->SMCR		= 0;
+    TIM2->CR1 		= 0;
+
+    TIM2->CCMR1 	|= (TIM_CCMR1_CC1S_0 | TIM_CCMR1_CC2S_0);   // TI1FP1 and TI2FP2 signals connected to CH1 and CH2
+    TIM2->SMCR		|= (TIM_SMCR_SMS_1 | TIM_SMCR_SMS_0);        // Capture encoder on both rising and falling edges
+    TIM2->ARR 		 = 0xFFFF;                                   // Set ARR to top of timer (longest possible period)
+    TIM2->CNT 		 = 0x7FFF;                                   // Bias at midpoint to allow for negative rotation
+    //TIM2->BDTR		|= TIM_BDTR_MOE;
+		TIM2->CR1 		|= TIM_CR1_CEN;                              // Enable timer
+
+
+//    // Configure a second timer (TIM6) to fire an ISR on update event
+//    // Used to periodically check and update speed variable
+//    RCC->APB1ENR |= RCC_APB1ENR_TIM6EN;
+//   
+//    // Select PSC and ARR values that give an appropriate interrupt rate
+//    TIM6->PSC = 11;
+//    TIM6->ARR = 30000;
+//   
+//    TIM6->DIER |= TIM_DIER_UIE;             // Enable update event interrupt
+//    TIM6->CR1 |= TIM_CR1_CEN;               // Enable Timer
+
+//    NVIC_EnableIRQ(TIM6_DAC_IRQn);          // Enable interrupt in NVIC
+//    NVIC_SetPriority(TIM6_DAC_IRQn,2);
+}
+
+// Encoder interrupt to calculate motor speed, also manages PI controller
+//void TIM6_DAC_IRQHandler(void) {
+//    /* Calculate the motor speed in raw encoder counts
+//     * Note the motor speed is signed! Motor can be run in reverse.
+//     * Speed is measured by how far the counter moved from center point
+//     */
+//    motor_speed = (TIM3->CNT - 0x7FFF);
+//    TIM3->CNT = 0x7FFF; // Reset back to center point
+//   
+//    // Call the PI update function
+//    PI_update();
+
+//    TIM6->SR &= ~TIM_SR_UIF;        // Acknowledge the interrupt
+//}
 
 /**
   * @brief  The application entry point.
@@ -262,36 +352,43 @@ int main(void)
 	MTR1_init();
 	MTR2_init();
 	
+	/* Enable Encoders */
+	encoder_init();
 	
 	
-	// Configure PA11/PA12 GPIO as Outputs
-//	GPIOA->MODER 		|=  (GPIO_MODER_MODER11_0 | GPIO_MODER_MODER12_0);
-//	GPIOA->MODER 		&= ~(GPIO_MODER_MODER11_1 | GPIO_MODER_MODER12_1);
-//	GPIOA->OTYPER 	&= ~(GPIO_OTYPER_OT_11 | GPIO_OTYPER_OT_12);
-//	GPIOA->OSPEEDR 	&= ~(GPIO_OSPEEDR_OSPEEDR11 | GPIO_OSPEEDR_OSPEEDR12);
-//	GPIOA->PUPDR 		&= ~(GPIO_PUPDR_PUPDR11 | GPIO_PUPDR_PUPDR12);
-//	
-	// Configure Buzzer Output
-	GPIOA->MODER 		|= GPIO_MODER_MODER11_0;			// Output Mode
-	GPIOA->MODER 		&= ~GPIO_MODER_MODER11_1;		// ...
-	GPIOA->OTYPER 	&= ~GPIO_OTYPER_OT_11;				// Push-pull type
-	GPIOA->OSPEEDR 	&= ~GPIO_OSPEEDR_OSPEEDR11;	// Low Speed
-	GPIOA->PUPDR 		|= GPIO_PUPDR_PUPDR11_1;			// Pull-down
-	GPIOA->PUPDR 		&= ~GPIO_PUPDR_PUPDR11_0;		// ...
-	GPIOA->ODR 			|= GPIO_ODR_11;							// Off
-	
+
+
 	// Motor Forward
-	//GPIOA->ODR |= GPIO_ODR_11;
 	
+	
+	
+	TIM17->CCR1	 	 = 120;
+	TIM16->CCR1 	 = 120;
+	TIM14->CCR1 	 = 300;
+
+
+		
   while (1)
   {
 			
 		// Code Running Indicator
 		Blink();
+				
+		GPIOB->ODR |= GPIO_ODR_2;							// Off
+		GPIOB->ODR |= GPIO_ODR_7;
 		
+
 		
-		GPIOB->ODR |= GPIO_ODR_0;
-		//HAL_Delay(20);
+//		if (TIM2->CNT > 0x7FFF) {GPIOC->ODR |=GPIO_ODR_8;} else {GPIOC->ODR &= ~GPIO_ODR_8;}
+//		if (TIM2->CNT == 0x7FFF) {GPIOC->ODR |=GPIO_ODR_7;} else {GPIOC->ODR &= ~GPIO_ODR_7;}
+//		
+//		if (TIM3->CNT > 0x7FFF) {GPIOC->ODR |=GPIO_ODR_8;} else {GPIOC->ODR &= ~GPIO_ODR_8;}
+//		if (TIM3->CNT == 0x7FFF) {GPIOC->ODR |=GPIO_ODR_7;} else {GPIOC->ODR &= ~GPIO_ODR_7;}
+		
+	//	HAL_Delay(1000);
+
+		
+	//	SpeedTest();
 		
 		//uint8_t duty = 80;
 		
@@ -302,6 +399,25 @@ int main(void)
 		
   }
 }
+
+
+
+
+///////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 /**
   * @brief System Clock Configuration
