@@ -41,6 +41,16 @@
 
 /* Private variables ---------------------------------------------------------*/
 /* USER CODE BEGIN PV */
+int ticks_left = 1000;
+
+// Motor Ramp Delays (SysTick Delay)
+int RampDelay1 = 0;
+int RampDelay2 = 0;
+
+int Prox1 = 0;
+int Prox2 = 0;
+
+int UpdateDelay = 500;
 
 /* USER CODE END PV */
 
@@ -57,7 +67,10 @@
 /* External variables --------------------------------------------------------*/
 
 /* USER CODE BEGIN EV */
-
+extern int req_start_index;
+extern int req_end_index;
+extern char buf[32];
+extern int req_pending;
 /* USER CODE END EV */
 
 /******************************************************************************/
@@ -125,12 +138,22 @@ void PendSV_Handler(void)
 void SysTick_Handler(void)
 {
   /* USER CODE BEGIN SysTick_IRQn 0 */
-
+	ticks_left --;
+	
+	if (ticks_left == 0) {
+		// SHUT EVERYTHING DOWN OR BLOW UP!!!!!
+	}
   /* USER CODE END SysTick_IRQn 0 */
   HAL_IncTick();
   /* USER CODE BEGIN SysTick_IRQn 1 */
 
+	
+	// Ramp Delays
+	if (RampDelay1 > 0) {RampDelay1 --;}
+	if (RampDelay2 > 0) {RampDelay2 --;}
   /* USER CODE END SysTick_IRQn 1 */
+	
+	if (UpdateDelay > 0) {UpdateDelay --;}
 }
 
 /******************************************************************************/
@@ -141,23 +164,83 @@ void SysTick_Handler(void)
 /******************************************************************************/
 
 /* USER CODE BEGIN 1 */
+void USART1_IRQHandler(void) {
+	
+	char c = USART1->RDR;
+	
+	if (c == (char)HMI_HEARTBEAT) {
+		ticks_left = 1000;
+	} else {
+		if (c == (char)NEWLINE) {
+			req_pending++;
+		}
+		
+		buf[req_end_index] = c;
+		req_end_index++;
+		
+		if (req_end_index == 32) {
+			req_end_index = 0;
+		}
+		
+	}	
+	
+	// Set RXNE Interrrupt bit
+	USART1->CR1 |= 0x1 << 5;
+}
+
+
+
+
+void LimitSwitch1_Update()
+{
+	// Check Prox Sensor 1
+		if ((GPIOC->IDR & GPIO_IDR_0) == GPIO_IDR_0)
+		{
+			Prox1 = 1;
+			GPIOC->ODR |= GPIO_ODR_6;		
+		}
+		else 
+		{
+			Prox1 = 0;
+			TIM3->CNT = 0x7FFF;
+			GPIOC->ODR &= ~GPIO_ODR_6;
+		}
+	}
+
+	void LimitSwitch2_Update()
+	{
+		// Check Prox Sensor 2
+		if ((GPIOC->IDR & GPIO_IDR_3) == GPIO_IDR_3)
+		{
+			Prox2 = 1;
+			GPIOC->ODR |= GPIO_ODR_7;
+		}
+		else 
+		{
+			Prox2 = 0;
+			TIM2->CNT = 0x7FFF;
+			GPIOC->ODR &= ~GPIO_ODR_7;
+		}
+	}
+	
 // Writing the EXTI Interrupt Handler (Limit Switches
 	void EXTI0_1_IRQHandler(){
 		
-		// Check Prox Sensor 1
-		if ((GPIOC->IDR & GPIO_IDR_0) == GPIO_IDR_0)
-		{GPIOC->ODR |= GPIO_ODR_6;}
-		else 
-		{GPIOC->ODR &= ~GPIO_ODR_6;}
+		LimitSwitch1_Update();
 		
-		// Check Prox Sensor 2
-		if ((GPIOC->IDR & GPIO_IDR_1) == GPIO_IDR_1)
-		{GPIOC->ODR |= GPIO_ODR_7;}
-		else 
-		{GPIOC->ODR &= ~GPIO_ODR_7;}
-		
+				
 		// Acknowledge Interrupt Complete
 		EXTI->PR |= (1 << 0);
 	}
+	
+	void EXTI2_3_IRQHandler(){
+		
+	  LimitSwitch2_Update();
+		
+		
+		// Acknowledge Interrupt Complete
+		EXTI->PR |= (1 << 3);
+	}
+		
 /* USER CODE END 1 */
 

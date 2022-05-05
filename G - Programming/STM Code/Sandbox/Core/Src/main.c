@@ -19,7 +19,9 @@
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
 
-
+#include "string.h"
+#include "stdlib.h"
+#include <stdio.h>
 
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
@@ -34,14 +36,53 @@ void SystemClock_Config(void);
 #define overcurrent_mask	= 0x04;	// Future expansion
 
 
-int8_t MTR1_SR = 0;	// Motor 1 Status Register
-int8_t MTR2_SR = 0; // Motor 2 Status Register
+uint8_t MTR1_SR = 0;	// Motor 1 Status Register
+uint8_t MTR2_SR = 0; // Motor 2 Status Register
 
-int8_t LS1_SR = 0;
-int8_t LS2_SR = 0;
+#define running = 0x00;		// True if encoder is changing 
+#define forward = 0x01;		// True if encoder incrementing
+#define reverse = 0x02;		// True if encoder decrementing
 
-int8_t AlarmGroup1 = 0;
+uint8_t LS1_SR = 0;
+uint8_t LS2_SR = 0;
 
+uint8_t AlarmGroup1 = 0;
+
+//
+extern int Prox1;
+extern int Prox2;
+
+// Ramp Delay (SysTick)
+extern int RampDelay1;
+extern int RampDelay2;
+
+extern int UpdateDelay;
+
+// Motor Variables
+uint8_t MTR1_CurrentSpeed = 0;
+uint8_t MTR2_CurrentSpeed = 0;
+uint8_t TurtleSpeed = 30;
+uint8_t RabbitSpeed = 90;
+
+const uint8_t TICKS_PER_INCH = 228;
+const uint8_t TICKS_PER_MM = 9;
+
+int SP1 = 2280;
+int SP2 = 570;
+int Overtravel_SP = 712;
+
+// 8in = 1140
+
+int Overtravel = 0;
+
+// State Variables
+int current_state = IDLE;
+
+// UART Variables
+int req_start_index = 0;
+int req_end_index = 0;
+int req_pending = 0;
+char buf[32];
 	
 void RCC_init()
 {
@@ -80,23 +121,25 @@ void LimitSwitch_init()
 	*/
 	
 	// Configure GPIO Inputs
-	GPIOC->MODER 		&= ~(GPIO_MODER_MODER0 | GPIO_MODER_MODER1);					// Set Input Mode
-	GPIOC->OSPEEDR 	&= ~(GPIO_OSPEEDR_OSPEEDR0 | GPIO_OSPEEDR_OSPEEDR1);	// Reset Output Speed
-	GPIOC->PUPDR 		|=  (GPIO_PUPDR_PUPDR0_1 | GPIO_PUPDR_PUPDR1_1);			// Set Pull-down resistor
-	GPIOC->PUPDR 		&= ~(GPIO_PUPDR_PUPDR0_0 | GPIO_PUPDR_PUPDR1_0);			// ...
+	GPIOC->MODER 		&= ~(GPIO_MODER_MODER0 | GPIO_MODER_MODER3);					// Set Input Mode
+	GPIOC->OSPEEDR 	&= ~(GPIO_OSPEEDR_OSPEEDR0 | GPIO_OSPEEDR_OSPEEDR3);	// Reset Output Speed
+	GPIOC->PUPDR 		|=  (GPIO_PUPDR_PUPDR0_1 | GPIO_PUPDR_PUPDR3_1);			// Set Pull-down resistor
+	GPIOC->PUPDR 		&= ~(GPIO_PUPDR_PUPDR0_0 | GPIO_PUPDR_PUPDR3_0);			// ...
 	
 	// EXT1 Configuration
-	EXTI->IMR  |= EXTI_IMR_IM0 | EXTI_IMR_IM1;			// Enable Interrupt Masks
-	EXTI->RTSR |= EXTI_RTSR_RT0 | EXTI_RTSR_RT1;		// Enable Rising Edge Trigger
-	EXTI->FTSR |= EXTI_FTSR_FT0 | EXTI_FTSR_FT1;		// Enable Falling Edge Trigger
+	EXTI->IMR  |= EXTI_IMR_IM0 | EXTI_IMR_IM3;			// Enable Interrupt Masks
+	EXTI->RTSR |= EXTI_RTSR_RT0 | EXTI_RTSR_RT3;		// Enable Rising Edge Trigger
+	EXTI->FTSR |= EXTI_FTSR_FT0 | EXTI_FTSR_FT3;		// Enable Falling Edge Trigger
 	
-	// Set EXTI0 Multiplexer for PA0
-	SYSCFG->EXTICR[0] &= 0xFFFFFF00;
-	SYSCFG->EXTICR[0] |= (1 << 1) | (1 << 5);
+	// Set EXTI0 Multiplexer for PC0
+	SYSCFG->EXTICR[0] &= 0xFFFF0FF0;
+	SYSCFG->EXTICR[0] |= (1 << 1) | (1 << 13);
 	
 	// Enable and Set Priority fo the EXTI Interrupt
 	NVIC_EnableIRQ(EXTI0_1_IRQn);
+	NVIC_EnableIRQ(EXTI2_3_IRQn);
 	NVIC_SetPriority(EXTI0_1_IRQn,2);
+	NVIC_SetPriority(EXTI2_3_IRQn,2);
 	
 	// Check Current State
 	
@@ -116,6 +159,16 @@ void Buzzer_init()
 	GPIOA->PUPDR 		&= ~GPIO_PUPDR_PUPDR8_0;		// ...
 	GPIOA->ODR 			&= ~GPIO_ODR_8;							// Off
 }///
+
+void Buzzer_On()
+{
+	GPIOA->ODR 			|= GPIO_ODR_8;
+}
+
+void Buzzer_Off()
+{
+	GPIOA->ODR 			&= ~GPIO_ODR_8;
+}
 
 void Blink()
 {///
@@ -292,36 +345,226 @@ void encoder_init()
     //TIM2->BDTR		|= TIM_BDTR_MOE;
 		TIM2->CR1 		|= TIM_CR1_CEN;                              // Enable timer
 
-
-//    // Configure a second timer (TIM6) to fire an ISR on update event
-//    // Used to periodically check and update speed variable
-//    RCC->APB1ENR |= RCC_APB1ENR_TIM6EN;
-//   
-//    // Select PSC and ARR values that give an appropriate interrupt rate
-//    TIM6->PSC = 11;
-//    TIM6->ARR = 30000;
-//   
-//    TIM6->DIER |= TIM_DIER_UIE;             // Enable update event interrupt
-//    TIM6->CR1 |= TIM_CR1_CEN;               // Enable Timer
-
-//    NVIC_EnableIRQ(TIM6_DAC_IRQn);          // Enable interrupt in NVIC
-//    NVIC_SetPriority(TIM6_DAC_IRQn,2);
 }
 
-// Encoder interrupt to calculate motor speed, also manages PI controller
-//void TIM6_DAC_IRQHandler(void) {
-//    /* Calculate the motor speed in raw encoder counts
-//     * Note the motor speed is signed! Motor can be run in reverse.
-//     * Speed is measured by how far the counter moved from center point
-//     */
-//    motor_speed = (TIM3->CNT - 0x7FFF);
-//    TIM3->CNT = 0x7FFF; // Reset back to center point
-//   
-//    // Call the PI update function
-//    PI_update();
 
-//    TIM6->SR &= ~TIM_SR_UIF;        // Acknowledge the interrupt
-//}
+void UART_init()
+{
+	__HAL_RCC_USART1_CLK_ENABLE();
+	
+	// Init UART TX/RX Pins
+	GPIO_InitTypeDef initStrUART = {GPIO_PIN_9 | GPIO_PIN_10, GPIO_MODE_AF_PP, NULL, NULL};
+	HAL_GPIO_Init(GPIOA, &initStrUART);
+	
+	// Set AFR to alternate function AF4
+	GPIOA->AFR[1] |= (0x1 << 4 | 0x1 << 8);
+	
+	// Set Baud rate to 115200
+	USART1->BRR = 69;
+	
+	// Enable RX, TX, and USART Module
+	USART1->CR1 |= (0x1 << 3) | (0x1 << 2) | 0x1;
+	
+	NVIC_SetPriority(USART1_IRQn, 1);
+	NVIC_EnableIRQ(USART1_IRQn);
+	
+	// Set RXNE Interrrupt bit
+	USART1->CR1 |= 0x1 << 5;
+}
+
+
+///////////////////////////
+
+
+int read_buffer_int() {
+    char int_buf[16] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+    int end_index = req_start_index;
+
+    int i = 0;
+    while (buf[end_index] != NEWLINE && i < 15) { // If that second condition is true, something is wrong, I just don't know how to handle it yet.
+        int_buf[i] = buf[end_index];
+        i++;
+        end_index++;
+        if (end_index == 32) {
+            end_index = 0;
+        }
+    }
+
+    return atoi(int_buf);
+}
+
+/* USER CODE BEGIN 0 */
+int read_buffer() {
+	int command = buf[req_start_index];
+	
+	req_start_index ++;
+	
+	if (req_start_index == 32) {
+			req_start_index = 0;
+	}
+	req_pending--;
+	
+	switch (command) {
+		case NEWLINE:
+			return NONE; // Must return here otherwise we keep reading into nothingness...
+		case DESK_STOP:
+			break;
+		case DESK_RAISE:
+			break;
+		case DESK_LOWER:
+			break;
+		case DESK_HOME:
+			break;
+		case DESK_GOTO_SP1:
+			break;
+		case DESK_GOTO_SP2:
+			break;
+		case MTR1_RAISE:
+			break;
+		case MTR1_LOWER:
+			break;
+		case MTR2_RAISE:
+			break;
+		case MTR2_LOWER:
+			break;
+		case TURTLE_SPEED_SP:
+			// turtle_speed = read_buffer_int();
+			break;
+		case RABBIT_SPEED_SP:
+			// rabbit_speed = read_buffer_int();
+			break;
+		case RABBIT_SPEED_EN:
+			// rabbit_speed_en = read_buffer_int();
+			break;
+		case SET_SPEED_SCALE:
+			// speed_scale = read_buffer_int();
+			break;
+		case SET_GAIN_P:
+			// gain_p = read_buffer_int();
+			break;
+		case SET_GAIN_I:
+			// gain_i = read_buffer_int();
+			break;
+		case SET_GAIN_D:
+			// gain_d = read_buffer_int();
+			break;
+		default:
+			command = NONE; // We got a garbage character
+			break;
+	}
+	
+	while (buf[req_start_index] != NEWLINE) {
+		req_start_index++;
+		if (req_start_index == 32) {
+			req_start_index = 0;
+		}
+	}
+	
+	req_start_index++; // Increment one more time to go past the newline character.
+	if (req_start_index == 32) {
+			req_start_index = 0;
+	}
+	
+	return command;
+}
+
+
+void MTR1_FWD()
+{
+	GPIOB->ODR &= ~GPIO_ODR_2;	// MTR1 REV
+	GPIOB->ODR |=  GPIO_ODR_3;	// ...
+	
+	// TODO: Set MTR2 Forward Direction Status
+}
+
+void MTR1_REV()
+{
+	GPIOB->ODR |=  GPIO_ODR_2;	// MTR1 REV
+	GPIOB->ODR &= ~GPIO_ODR_3;	// ...
+	
+	// TODO: Set MTR1 Reverse Direction Status
+}
+
+void MTR2_FWD()
+{
+	GPIOB->ODR |=  GPIO_ODR_7;	// MTR2 FWD
+	GPIOB->ODR &= ~GPIO_ODR_8;	// ...
+	
+	// TODO: Set MTR2 Forward Direction Status
+}
+
+void MTR2_REV()
+{
+	GPIOB->ODR &= ~GPIO_ODR_7;	// MTR2 REV
+	GPIOB->ODR |=  GPIO_ODR_8;	// ...
+	
+	// TODO: Set MTR2 Reverse Direction Status
+}
+
+void MTR1_Stop()
+{
+	// Disable Motor
+	MTR1_SetDuty(0);
+	MTR1_CurrentSpeed = 0;
+	
+	// Open Relays
+	GPIOB->ODR &= ~GPIO_ODR_2;	
+	GPIOB->ODR &= ~GPIO_ODR_3;	
+	
+	// TODO: Reset MTR1_RUNNING Status
+}
+
+void MTR2_Stop()
+{
+	// Disable Motor
+	MTR2_SetDuty(0);
+	MTR2_CurrentSpeed = 0;
+	
+	// Open Relays
+	GPIOB->ODR &= ~GPIO_ODR_7;	
+	GPIOB->ODR &= ~GPIO_ODR_8;	
+	
+	// TODO: Reset MTR2_RUNNING Status
+}
+
+void MTR1_RampSpeed(int8_t speed)
+{
+	
+	
+	
+	if (MTR1_CurrentSpeed < speed)
+	{
+			if (RampDelay1 == 0)
+			{
+				MTR1_CurrentSpeed ++;
+				MTR1_SetDuty(MTR1_CurrentSpeed);
+				RampDelay1 = 10;
+			}
+	}
+}
+
+void MTR2_RampSpeed(int8_t speed)
+{
+	if (MTR2_CurrentSpeed < speed)
+	{
+		if (RampDelay2 == 0)
+		{
+			MTR2_CurrentSpeed ++;
+			MTR2_SetDuty(MTR2_CurrentSpeed);
+			RampDelay2 = 10;
+		}
+	}
+}
+
+
+
+
+
+extern void LimitSwitch1_Update(void);
+extern void LimitSwitch2_Update(void);
+
+///////////////////////////////////
+
 
 /**
   * @brief  The application entry point.
@@ -355,27 +598,33 @@ int main(void)
 	/* Enable Encoders */
 	encoder_init();
 	
-	
-
+	/* Configure USART1 */
+	UART_init();
 
 	// Motor Forward
 	
 	
-	
-	TIM17->CCR1	 	 = 120;
-	TIM16->CCR1 	 = 120;
-	TIM14->CCR1 	 = 300;
+	TIM14->CCR1 	 = 0;
+	TIM17->CCR1	 	 = 0;
+  GPIOB->ODR &= ~GPIO_ODR_2;	// MTR1 Off
+	GPIOB->ODR &= ~GPIO_ODR_3;	// ...
+	GPIOB->ODR &= ~GPIO_ODR_7;	// MTR2 Off
+	GPIOB->ODR &= ~GPIO_ODR_8;	// ...
 
-
+	LimitSwitch1_Update();
+	LimitSwitch2_Update();
 		
+		
+	uint32_t h1 = 0;
+	char from_int[30];
+	
   while (1)
   {
 			
 		// Code Running Indicator
-		Blink();
+//		Blink();
 				
-		GPIOB->ODR |= GPIO_ODR_2;							// Off
-		GPIOB->ODR |= GPIO_ODR_7;
+
 		
 
 		
@@ -397,6 +646,190 @@ int main(void)
 		// Test Motor Speed
 		//SpeedTest();
 		
+		
+		
+		//////////////////////////////////
+		
+		/* USER CODE END WHILE */
+		// HAL_Delay(250);
+		// sendStr("Doing other tasks...\n\r");
+		
+		
+
+		int command = NONE;
+    if (req_pending > 0) {
+			command = read_buffer();
+		}
+		
+		/*	
+			UNCALIBRATED
+			HOMING
+			IDLE
+			DESK_LOWERING
+			DESK_RAISING
+			TARGET_POSITIONING
+			LEGL_LOWERING
+			LEGL_RAISING
+			LEGR_LOWERING
+			LEGR_RAISING
+		*/
+		
+		//if (TIM3->CNT > 0x7FFF + Overtravel_SP) {GPIOC->ODR |= GPIO_ODR_8;} else {GPIOC->ODR &= ~GPIO_ODR_8;}
+		//if (TIM3->CNT == 0x7FFF) {GPIOC->ODR |= GPIO_ODR_9;} else {GPIOC->ODR &= ~GPIO_ODR_9;}
+		
+		// Detect Overtravel
+		if ((TIM3->CNT > 0x7FFF + Overtravel_SP) || (TIM2->CNT > 0x7FFF + Overtravel_SP)) {Overtravel = 1;} else {Overtravel = 0;}
+		if (Overtravel == 1) {Buzzer_On();} else {Buzzer_Off();}
+			
+		// Update HMI Data
+		if (UpdateDelay == 0)
+		{
+			h1 = TIM3->CNT;
+			//if (h1 > 100) {h1 = 100;} 
+			
+			sprintf(from_int,"%d",h1);
+			sendStr("h1.val=");
+			sendStr(from_int);
+			sendChar(0xFF);
+			sendChar(0xFF);
+			sendChar(0xFF);
+			
+			UpdateDelay = 500;
+		}
+		
+			
+		switch (current_state) {
+
+			case UNCALIBRATED:
+				if (command == DESK_HOME) {
+					current_state = HOMING;
+					// ENABLE WDTMTR
+				}
+				break;
+			case HOMING:
+				// Ramp up to Speed
+				if (Prox1 == 1)
+				{MTR1_RampSpeed(TurtleSpeed);}
+				else
+				{MTR1_SetDuty(0);}
+				
+				if (Prox2 == 1)
+				{MTR2_RampSpeed(TurtleSpeed);}
+				else
+				{MTR2_SetDuty(0);}
+				
+				if ((Prox1 == 0) && (Prox2 == 0)) { // IF Calibration is done - do we need to make a calculation or set a variable on an interrupt?
+					current_state = IDLE;
+					// Reset Outputs
+					MTR1_Stop();
+					MTR2_Stop();
+					
+					// DISABLE WDTMTR
+				} else if (0) { // WDTMTR_DN
+					// FTH
+				}
+				break;
+			case IDLE:
+				
+				switch (command) {
+					case DESK_HOME:
+						current_state = HOMING;
+						MTR1_REV();
+						MTR2_REV();
+						// ENABLE WDTMTR
+						break;
+					case DESK_RAISE:
+						if (Overtravel == 0) 
+						{
+							current_state = DESK_RAISING;
+							MTR1_FWD();
+							MTR2_FWD();
+						} 
+						
+						break;
+					case DESK_LOWER:
+						current_state = DESK_LOWERING;
+						MTR1_REV();
+						MTR2_REV();
+						break;
+					case DESK_GOTO_SP1:
+						// Set target
+						current_state = TARGET_POSITIONING;
+						// ENABLE WDTMTR
+						break;
+					case DESK_GOTO_SP2:
+						// Set target
+						current_state = TARGET_POSITIONING;
+						// ENABLE WDTMTR
+						break;
+					case MTR1_RAISE:
+						current_state = LEGL_RAISING;
+						break;
+					case MTR1_LOWER:
+						current_state = LEGL_LOWERING;
+						break;
+					case MTR2_RAISE:
+						current_state = LEGR_RAISING;
+						break;
+					case MTR2_LOWER:
+						current_state = LEGR_LOWERING;
+						break;
+					default:
+						break;
+				}
+				break;
+			case DESK_LOWERING:
+				// Ramp up to Speed
+				if (Prox1 == 1)
+				{MTR1_RampSpeed(RabbitSpeed);}
+				else
+				{MTR1_SetDuty(0);}
+				
+				if (Prox2 == 1)
+				{MTR2_RampSpeed(RabbitSpeed);}
+				else
+				{MTR2_SetDuty(0);}
+			
+				if (command == DESK_STOP) 
+				{
+					current_state = IDLE;
+					MTR1_Stop();
+					MTR2_Stop();
+				}
+				break;
+			case DESK_RAISING:
+				// Ramp up to Speed
+				MTR1_RampSpeed(RabbitSpeed);
+				MTR2_RampSpeed(RabbitSpeed);
+			
+				if ((command == DESK_STOP) || (Overtravel == 1)) 
+				{
+					current_state = IDLE;
+					MTR1_Stop();
+					MTR2_Stop();
+				}
+				break;
+			case LEGL_LOWERING:
+				break;
+			case LEGL_RAISING:
+				break;
+			case LEGR_LOWERING:
+				break;
+			case LEGR_RAISING:
+				if (command == DESK_STOP) {
+					current_state = IDLE;
+				}
+				break;
+			case TARGET_POSITIONING:
+				if (1) { // Done Positioning
+					current_state = IDLE;
+					// DISABLE WDTMTR
+				}
+				break;
+			default:
+				// How did we get here? (No seriously, if we are here, something is wrong)
+				break;
+		}
   }
 }
 
@@ -410,7 +843,21 @@ int main(void)
 
 
 
+/* USER CODE BEGIN 4 */
+void sendChar(char c) {
+	while (!((USART1->ISR & USART_ISR_TC) == USART_ISR_TC));
+	
+	USART1->TDR = c;
+}
 
+void sendStr(char* s) {	
+	int i = 0;
+	while (s[i]) {
+		while (!((USART1->ISR & USART_ISR_TC) == USART_ISR_TC));
+		USART1->TDR = s[i];
+		i++;
+	}
+}
 
 
 
