@@ -36,7 +36,18 @@ extern "C" {
 
 /* Exported types ------------------------------------------------------------*/
 /* USER CODE BEGIN ET */
-enum states { IDLE, MOTOR_UP };
+enum states {
+	UNCALIBRATED,
+	HOMING,
+	IDLE,
+	DESK_LOWERING,
+	DESK_RAISING,
+	TARGET_POSITIONING,
+	LEGL_LOWERING,
+	LEGL_RAISING,
+	LEGR_LOWERING,
+	LEGR_RAISING
+};
 /* USER CODE END ET */
 
 /* Exported constants --------------------------------------------------------*/
@@ -87,11 +98,15 @@ void Error_Handler(void);
 void sendChar(char c);
 
 void sendStr(char* s);
+
+void pwm_init(void);
+void pwm_setDutyCycle(uint8_t);
+
 /* USER CODE END EFP */
 
 /* Private defines -----------------------------------------------------------*/
 /* USER CODE BEGIN Private defines */
-int current_state = IDLE;
+int current_state = UNCALIBRATED;
 int req_start_index = 0;
 int req_end_index = 0;
 int req_pending = 0;
