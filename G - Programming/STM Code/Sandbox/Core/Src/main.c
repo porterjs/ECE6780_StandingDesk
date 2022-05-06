@@ -58,7 +58,7 @@ extern int UpdateDelay;
 // Motor Variables
 uint8_t MTR1_CurrentSpeed = 0;
 uint8_t MTR2_CurrentSpeed = 0;
-uint8_t TurtleSpeed = 30;
+uint8_t TurtleSpeed = 50;
 uint8_t RabbitSpeed = 90;
 
 const uint8_t TICKS_PER_INCH = 228;
