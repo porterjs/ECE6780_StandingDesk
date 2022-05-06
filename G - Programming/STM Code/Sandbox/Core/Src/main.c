@@ -27,14 +27,11 @@
 void SystemClock_Config(void);
 
 /* Define Global Variables */
-
-
 #define uncalibrated_mask = 0x00;
 #define ftc_mask					= 0x01;	// Failed-to-calibrate
 #define overtravel_mask		= 0x02;
 #define reversepol_mask		= 0x03;
 #define overcurrent_mask	= 0x04;	// Future expansion
-
 
 uint8_t MTR1_SR = 0;	// Motor 1 Status Register
 uint8_t MTR2_SR = 0; // Motor 2 Status Register
@@ -47,7 +44,7 @@ uint8_t LS1_SR = 0;
 uint8_t LS2_SR = 0;
 
 uint8_t AlarmGroup1 = 0;
-
+uint8_t test;
 //
 extern int Prox1;
 extern int Prox2;
@@ -615,8 +612,8 @@ int main(void)
 	LimitSwitch2_Update();
 		
 		
-	uint32_t h1 = 0;
-	char from_int[30];
+//	uint32_t h1 = 0;
+//	char from_int[30];
 	
   while (1)
   {
@@ -682,22 +679,22 @@ int main(void)
 		if (Overtravel == 1) {Buzzer_On();} else {Buzzer_Off();}
 			
 		// Update HMI Data
-		if (UpdateDelay == 0)
-		{
-			h1 = TIM3->CNT;
-			//if (h1 > 100) {h1 = 100;} 
-			
-			sprintf(from_int,"%d",h1);
-			sendStr("h1.val=");
-			sendStr(from_int);
-			sendChar(0xFF);
-			sendChar(0xFF);
-			sendChar(0xFF);
-			
-			UpdateDelay = 500;
-		}
+//		if (UpdateDelay == 0)
+//		{
+//			// h1 = TIM3->CNT;
+//			//if (h1 > 100) {h1 = 100;} 
+//			
+//			sprintf(from_int,"%d",h1);
+//			sendStr("h1.val=");
+//			sendStr(from_int);
+//			sendChar(0xFF);
+//			sendChar(0xFF);
+//			sendChar(0xFF);
+//			
+//			UpdateDelay = 500;
+//		}
 		
-			
+			  // 
 		switch (current_state) {
 
 			case UNCALIBRATED:
@@ -739,12 +736,12 @@ int main(void)
 						// ENABLE WDTMTR
 						break;
 					case DESK_RAISE:
-						if (Overtravel == 0) 
-						{
+						//if (Overtravel == 0) 
+						//{
 							current_state = DESK_RAISING;
 							MTR1_FWD();
 							MTR2_FWD();
-						} 
+						//} 
 						
 						break;
 					case DESK_LOWER:
@@ -763,16 +760,26 @@ int main(void)
 						// ENABLE WDTMTR
 						break;
 					case MTR1_RAISE:
-						current_state = LEGL_RAISING;
+							current_state = LEGL_RAISING;
+							MTR1_FWD();
 						break;
 					case MTR1_LOWER:
-						current_state = LEGL_LOWERING;
+						if (Prox1 == 1)
+						{
+							current_state = LEGL_LOWERING;
+							MTR1_REV();
+						}
 						break;
 					case MTR2_RAISE:
 						current_state = LEGR_RAISING;
+						MTR2_FWD();
 						break;
 					case MTR2_LOWER:
-						current_state = LEGR_LOWERING;
+						if (Prox2 ==1)
+						{
+							current_state = LEGR_LOWERING;
+							MTR2_REV();
+						}
 						break;
 					default:
 						break;
@@ -802,7 +809,7 @@ int main(void)
 				MTR1_RampSpeed(RabbitSpeed);
 				MTR2_RampSpeed(RabbitSpeed);
 			
-				if ((command == DESK_STOP) || (Overtravel == 1)) 
+				if ((command == DESK_STOP))// || (Overtravel == 1)) 
 				{
 					current_state = IDLE;
 					MTR1_Stop();
@@ -810,14 +817,44 @@ int main(void)
 				}
 				break;
 			case LEGL_LOWERING:
+				if (Prox1 == 1)
+				{MTR1_RampSpeed(TurtleSpeed);}
+				else
+				{MTR1_SetDuty(0);}
+				
+				if (command == DESK_STOP) 
+				{
+					current_state = IDLE;
+					MTR1_Stop();
+				}
 				break;
 			case LEGL_RAISING:
+				MTR1_RampSpeed(TurtleSpeed);
+				
+				if (command == DESK_STOP) 
+				{
+					current_state = IDLE;
+					MTR1_Stop();
+				}
 				break;
 			case LEGR_LOWERING:
+				if (Prox2 == 1)
+				{MTR2_RampSpeed(TurtleSpeed);}
+				else
+				{MTR2_SetDuty(0);}
+				
+				if (command == DESK_STOP) 
+				{
+					current_state = IDLE;
+					MTR2_Stop();
+				}
 				break;
 			case LEGR_RAISING:
+				{MTR2_RampSpeed(TurtleSpeed);}
+				
 				if (command == DESK_STOP) {
 					current_state = IDLE;
+					MTR2_Stop();
 				}
 				break;
 			case TARGET_POSITIONING:
