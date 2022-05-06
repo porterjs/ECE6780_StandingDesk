@@ -1,0 +1,68 @@
+<html>
+<body>
+<pre>
+<h1>µVision Build Log</h1>
+<h2>Tool Versions:</h2>
+IDE-Version: µVision V5.36.0.0
+Copyright (C) 2021 ARM Ltd and ARM Germany GmbH. All rights reserved.
+License Information: Corey Buchanan, University of Utah, LIC=----
+ 
+Tool Versions:
+Toolchain:       MDK-Lite  Version: 5.36.0.0
+Toolchain Path:  C:\Keil_v5\ARM\ARMCC\Bin
+C Compiler:      Armcc.exe V5.06 update 7 (build 960)
+Assembler:       Armasm.exe V5.06 update 7 (build 960)
+Linker/Locator:  ArmLink.exe V5.06 update 7 (build 960)
+Library Manager: ArmAr.exe V5.06 update 7 (build 960)
+Hex Converter:   FromElf.exe V5.06 update 7 (build 960)
+CPU DLL:         SARMCM3.DLL V5.36.0.0
+Dialog DLL:      DARMCM1.DLL V1.19.4.0
+Target DLL:      STLink\ST-LINKIII-KEIL_SWO.dll V3.0.9.0
+Dialog DLL:      TARMCM1.DLL V1.14.4.0
+ 
+<h2>Project:</h2>
+C:\Users\Corey\OneDrive\Desktop\ECE6780_StandingDesk\G - Programming\STM Code\Final_Code\MDK-ARM\Final_Code.uvprojx
+Project File Date:  05/05/2022
+
+<h2>Output:</h2>
+*** Using Compiler 'V5.06 update 7 (build 960)', folder: 'C:\Keil_v5\ARM\ARMCC\Bin'
+Build target 'Final_Code'
+compiling stm32f0xx_it.c...
+../Core/Src/stm32f0xx_it.c(76): warning:  #1295-D: Deprecated declaration MTR1_Stop - give arg types
+  extern void MTR1_Stop();
+../Core/Src/stm32f0xx_it.c(77): warning:  #1295-D: Deprecated declaration MTR2_Stop - give arg types
+  extern void MTR2_Stop();
+../Core/Src/stm32f0xx_it.c: 2 warnings, 0 errors
+compiling stm32f0xx_hal_msp.c...
+compiling main.c...
+linking...
+Program Size: Code=5860 RO-data=260 RW-data=72 ZI-data=1664  
+FromELF: creating hex file...
+"Final_Code\Final_Code.axf" - 0 Error(s), 2 Warning(s).
+
+<h2>Software Packages used:</h2>
+
+Package Vendor: ARM
+                http://www.keil.com/pack/ARM.CMSIS.5.8.0.pack
+                ARM.CMSIS.5.8.0
+                CMSIS (Common Microcontroller Software Interface Standard)
+   * Component: CORE Version: 5.5.0
+
+Package Vendor: Keil
+                http://www.keil.com/pack/Keil.STM32F0xx_DFP.2.1.1.pack
+                Keil.STM32F0xx_DFP.2.1.1
+                STMicroelectronics STM32F0 Series Device Support, Drivers and Examples
+
+<h2>Collection of Component include folders:</h2>
+  .\RTE\_Final_Code
+  C:\Users\Corey\AppData\Local\Arm\Packs\ARM\CMSIS\5.8.0\CMSIS\Core\Include
+  C:\Users\Corey\AppData\Local\Arm\Packs\Keil\STM32F0xx_DFP\2.1.1\Drivers\CMSIS\Device\ST\STM32F0xx\Include
+
+<h2>Collection of Component Files used:</h2>
+
+   * Component: ARM::CMSIS:CORE:5.5.0
+      Include file:  CMSIS\Core\Include\tz_context.h
+Build Time Elapsed:  00:00:05
+</pre>
+</body>
+</html>
