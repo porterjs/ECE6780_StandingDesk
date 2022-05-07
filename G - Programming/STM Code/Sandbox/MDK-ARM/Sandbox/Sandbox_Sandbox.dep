@@ -1,19 +1,7 @@
 Dependencies for Project 'Sandbox', Target 'Sandbox': (DO NOT MODIFY !)
 CompilerVersion: 5060960::V5.06 update 7 (build 960)::.\ARMCC
-<<<<<<< HEAD
-F (startup_stm32f072xb.s)(0x6243E3C0)(--cpu Cortex-M0 --pd "__EVAL SETA 1" -g --apcs=interwork -I.\RTE\_Sandbox-IC:\Users\jason\AppData\Local\Arm\Packs\ARM\CMSIS\5.8.0\CMSIS\Core\Include-IC:\Users\jason\AppData\Local\Arm\Packs\Keil\STM32F0xx_DFP\2.1.0\Drivers\CMSIS\Device\ST\STM32F0xx\Include--pd "__UVISION_VERSION SETA 536" --pd "_RTE_ SETA 1" --pd "STM32F072xB SETA 1" --pd "_RTE_ SETA 1"--list startup_stm32f072xb.lst --xref -o sandbox\startup_stm32f072xb.o --depend sandbox\startup_stm32f072xb.d)
-F (../Core/Src/main.c)(0x62746EAE)(--c99 -c --cpu Cortex-M0 -D__EVAL -g -O3 --apcs=interwork --split_sections -I ../Core/Inc -I ../Drivers/STM32F0xx_HAL_Driver/Inc -I ../Drivers/STM32F0xx_HAL_Driver/Inc/Legacy -I ../Drivers/CMSIS/Device/ST/STM32F0xx/Include -I ../Drivers/CMSIS/Include-I.\RTE\_Sandbox-IC:\Users\jason\AppData\Local\Arm\Packs\ARM\CMSIS\5.8.0\CMSIS\Core\Include-IC:\Users\jason\AppData\Local\Arm\Packs\Keil\STM32F0xx_DFP\2.1.0\Drivers\CMSIS\Device\ST\STM32F0xx\Include-D__UVISION_VERSION="536" -D_RTE_ -DSTM32F072xB -D_RTE_ -DUSE_HAL_DRIVER -DSTM32F072xB-o sandbox\main.o --omf_browse sandbox\main.crf --depend sandbox\main.d)
-I (../Core/Inc/main.h)(0x6271EB62)
-I (../Drivers/STM32F0xx_HAL_Driver/Inc/stm32f0xx_hal.h)(0x6243E3C0)
-I (../Core/Inc/stm32f0xx_hal_conf.h)(0x6243E3BF)
-I (../Drivers/STM32F0xx_HAL_Driver/Inc/stm32f0xx_hal_rcc.h)(0x6243E3C0)
-I (../Drivers/STM32F0xx_HAL_Driver/Inc/stm32f0xx_hal_def.h)(0x6243E3C0)
-I (../Drivers/CMSIS/Device/ST/STM32F0xx/Include/stm32f0xx.h)(0x6243E3BF)
-I (../Drivers/CMSIS/Device/ST/STM32F0xx/Include/stm32f072xb.h)(0x6243E3BF)
-I (../Drivers/CMSIS/Include/core_cm0.h)(0x6243E3BF)
-=======
 F (startup_stm32f072xb.s)(0x6243399C)(--cpu Cortex-M0 --pd "__EVAL SETA 1" -g --apcs=interwork -I.\RTE\_Sandbox-IC:\Users\jason\AppData\Local\Arm\Packs\ARM\CMSIS\5.8.0\CMSIS\Core\Include-IC:\Users\jason\AppData\Local\Arm\Packs\Keil\STM32F0xx_DFP\2.1.0\Drivers\CMSIS\Device\ST\STM32F0xx\Include--pd "__UVISION_VERSION SETA 536" --pd "_RTE_ SETA 1" --pd "STM32F072xB SETA 1" --pd "_RTE_ SETA 1"--list startup_stm32f072xb.lst --xref -o sandbox\startup_stm32f072xb.o --depend sandbox\startup_stm32f072xb.d)
-F (../Core/Src/main.c)(0x62746D0B)(--c99 -c --cpu Cortex-M0 -D__EVAL -g -O3 --apcs=interwork --split_sections -I ../Core/Inc -I ../Drivers/STM32F0xx_HAL_Driver/Inc -I ../Drivers/STM32F0xx_HAL_Driver/Inc/Legacy -I ../Drivers/CMSIS/Device/ST/STM32F0xx/Include -I ../Drivers/CMSIS/Include-I.\RTE\_Sandbox-IC:\Users\jason\AppData\Local\Arm\Packs\ARM\CMSIS\5.8.0\CMSIS\Core\Include-IC:\Users\jason\AppData\Local\Arm\Packs\Keil\STM32F0xx_DFP\2.1.0\Drivers\CMSIS\Device\ST\STM32F0xx\Include-D__UVISION_VERSION="536" -D_RTE_ -DSTM32F072xB -D_RTE_ -DUSE_HAL_DRIVER -DSTM32F072xB-o sandbox\main.o --omf_browse sandbox\main.crf --depend sandbox\main.d)
+F (../Core/Src/main.c)(0x62746F17)(--c99 -c --cpu Cortex-M0 -D__EVAL -g -O3 --apcs=interwork --split_sections -I ../Core/Inc -I ../Drivers/STM32F0xx_HAL_Driver/Inc -I ../Drivers/STM32F0xx_HAL_Driver/Inc/Legacy -I ../Drivers/CMSIS/Device/ST/STM32F0xx/Include -I ../Drivers/CMSIS/Include-I.\RTE\_Sandbox-IC:\Users\jason\AppData\Local\Arm\Packs\ARM\CMSIS\5.8.0\CMSIS\Core\Include-IC:\Users\jason\AppData\Local\Arm\Packs\Keil\STM32F0xx_DFP\2.1.0\Drivers\CMSIS\Device\ST\STM32F0xx\Include-D__UVISION_VERSION="536" -D_RTE_ -DSTM32F072xB -D_RTE_ -DUSE_HAL_DRIVER -DSTM32F072xB-o sandbox\main.o --omf_browse sandbox\main.crf --depend sandbox\main.d)
 I (../Core/Inc/main.h)(0x62746938)
 I (../Drivers/STM32F0xx_HAL_Driver/Inc/stm32f0xx_hal.h)(0x61F98E1F)
 I (../Core/Inc/stm32f0xx_hal_conf.h)(0x62433996)
@@ -22,7 +10,6 @@ I (../Drivers/STM32F0xx_HAL_Driver/Inc/stm32f0xx_hal_def.h)(0x61F98E1F)
 I (../Drivers/CMSIS/Device/ST/STM32F0xx/Include/stm32f0xx.h)(0x61F98E1F)
 I (../Drivers/CMSIS/Device/ST/STM32F0xx/Include/stm32f072xb.h)(0x61F98E1F)
 I (../Drivers/CMSIS/Include/core_cm0.h)(0x61F98E0A)
->>>>>>> f62cb467ca8f678a7f05aa757c2c76d6d9f17b4f
 I (C:\Keil_v5\ARM\ARMCC\include\stdint.h)(0x6025F66E)
 I (../Drivers/CMSIS/Include/cmsis_version.h)(0x61F98E0A)
 I (../Drivers/CMSIS/Include/cmsis_compiler.h)(0x61F98E0A)
