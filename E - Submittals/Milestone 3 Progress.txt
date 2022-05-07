@@ -1,0 +1,27 @@
+UART code
+Main commands can be read and decoded
+Modifying the method to ring buffer method (separate interrupt handler from decoding functions for improving efficiency)
+HMI and MCU talking to each other
+Motor control
+Lots of hardware testing:
+The original L298N H-bridge did not work properly with 24V output.
+Built a custom H-bridge using pnp/npn transistors. Successfully runs H-bridge.
+Built new schematic in Eagle based on testing
+PWM works! Speed control is working. However, discovered encoders are much too slow (about 10uS per count at full speed) for closed loop speed control.  We will try to implement a simple PID position controller. We will add a feature to manually tune speed.
+Can move unloaded leg up and down with HMI
+External Interrupt
+Proxy sensor triggers interrupt
+Buzzer
+Can trigger a buzzer noise through command
+ 
+
+Next steps:
+
+Test H-bridge with full-load (check performance and modify base resistors as needed)
+Revise FSM. Finding some issues as we go along.  Now that we have a lot of the pieces in place, we need to organize a little better.
+Assemble all parts and test with actual desk
+ 
+
+Overcoming Issues:
+
+We designed a custom PCB which was supposed to be delivered last week. Tracking information has correct address, but it never showed up.  It might still turn up, but we are starting to go with our backup plan which is to use the discovery board and build a perf board for all our field connections (just not enough time to order another board).  This is why we haven’t tested the H-bridge on a full-load yet (prevent fire on small wires running 10A).  We will still have all three lab topics incorporated.

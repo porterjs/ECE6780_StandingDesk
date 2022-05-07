@@ -1,0 +1,25 @@
+--cpu Cortex-M0
+"final_code\startup_stm32f072xb.o"
+"final_code\main.o"
+"final_code\stm32f0xx_it.o"
+"final_code\stm32f0xx_hal_msp.o"
+"final_code\stm32f0xx_hal_tim.o"
+"final_code\stm32f0xx_hal_tim_ex.o"
+"final_code\stm32f0xx_hal_rcc.o"
+"final_code\stm32f0xx_hal_rcc_ex.o"
+"final_code\stm32f0xx_hal.o"
+"final_code\stm32f0xx_hal_i2c.o"
+"final_code\stm32f0xx_hal_i2c_ex.o"
+"final_code\stm32f0xx_hal_gpio.o"
+"final_code\stm32f0xx_hal_dma.o"
+"final_code\stm32f0xx_hal_cortex.o"
+"final_code\stm32f0xx_hal_pwr.o"
+"final_code\stm32f0xx_hal_pwr_ex.o"
+"final_code\stm32f0xx_hal_flash.o"
+"final_code\stm32f0xx_hal_flash_ex.o"
+"final_code\stm32f0xx_hal_exti.o"
+"final_code\system_stm32f0xx.o"
+--strict --scatter "Final_Code\Final_Code.sct"
+--summary_stderr --info summarysizes --map --load_addr_map_info --xref --callgraph --symbols
+--info sizes --info totals --info unused --info veneers
+--list "Final_Code.map" -o Final_Code\Final_Code.axf
