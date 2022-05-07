@@ -37,6 +37,7 @@ D - Drawings - Archive of our PCB design files
 E - Submittals - Milestone submissions
 F - Programming - HMI and STM32 Code
 	- The working STM code is under the Final_Code folder.
+G - Result Media - Photos and the demo of our results.
 
 ## Setup instructions
 
@@ -62,6 +63,6 @@ PC1 - Limit Switch 2
 
 Our code was modified to exclude the encoder operation as our encoders were broken. That functionality could be added back in.
 
-The motors should be powered using a 24v supply. Hardware assembly can be seen with the in the images of the completed project.
+The motors should be powered using a 24v supply. Hardware assembly can be seen with the images of the completed project.
 
-The HMI controller can be programmed via USB with the <FIX> software.
+The HMI controller can be programmed via USB with a copy of the Nextion Editor software.
