@@ -29,15 +29,29 @@ The motor encoder hardware failed and gave undesirable behavior, making it impos
 
 ## File structure
 
-A - Preplanning - Contains some of our intial concept design for the system.
-B - Equipment Images - Images of the equipment used
-C - BOM - Bill of Materials for Project / PCB Design
-D - Drawings - Archive of our PCB design files
-	- Standing Desk Controller (version2) v31 - PCB Complete (under the New subdirectory) is the one we sent to Oshpark.
-E - Submittals - Milestone submissions
-F - Programming - HMI and STM32 Code
-	- The working STM code is under the Final_Code folder.
-G - Result Media - Photos and the demo of our results.
+A - Preplanning 
+- Contains some of our intial concept design for the system. 
+
+B - Equipment Images 
+- Images of the equipment used
+
+C - BOM 
+- Bill of Materials for Project / PCB Design
+
+D - Drawings 
+- Archive of our PCB design files
+- Standing Desk Controller (version2) v31 
+- PCB Complete (under the New subdirectory) is the one we sent to Oshpark.
+
+E - Submittals 
+- Milestone submissions
+
+F - Programming 
+- HMI and STM32 Code
+- The working STM code is under the Final_Code folder.
+
+G - Result Media 
+- Photos and the demo of our results.
 
 ## Setup instructions
 
