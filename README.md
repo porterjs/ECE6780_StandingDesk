@@ -99,7 +99,11 @@ We ran into some issues with the H-bridge.  The original design utilized the L29
 
 Without a PCB, we decided to split the master board into two boards: one for the proxy sensors and the other for the motor controls.  Here is the final protoboard for the proxy sensors.  
 
+![IMG_2666](https://user-images.githubusercontent.com/19315982/167232841-b92a5c31-d217-44db-bb0b-4126c64667c4.jpg)
+
 And here is the motor control board.  This was a tight fit, but we managed to get all the components on the board.  Each side has a full H-bridge.  The enable transistors did get a little warm during loaded testing, so we added heat sinks as a precaution.
+
+![IMG_2676](https://user-images.githubusercontent.com/19315982/167232830-d8ec011d-9a3b-4e22-93bf-7c31d51f1e3d.jpg)
 
 Each motor had a PWM output for the enable transistors. The transistors have a minimum switching frequency of 2Mhz.  The motor’s time constant would be in the order of milliseconds, so a 25us PWM period was sufficient.
 
